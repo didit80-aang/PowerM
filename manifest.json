@@ -1,0 +1,83 @@
+{
+  "name": "Sistem Monitoring Daya - Power Monitor",
+  "short_name": "PowerMon",
+  "description": "Monitoring Daya AC Real-time dengan Kontrol Relay & Proteksi Otomatis - ESP32 + PZEM-004T",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "categories": ["utilities", "monitoring", "productivity"],
+  "lang": "id-ID",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "iarc_rating_id": "",
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "📊 Monitor Daya",
+      "short_name": "Monitor",
+      "description": "Lihat monitoring daya real-time",
+      "url": "./?tab=monitor",
+      "icons": [
+        {
+          "src": "./icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "📋 Data Logger",
+      "short_name": "Logger",
+      "description": "Lihat riwayat pencatatan data",
+      "url": "./?tab=logger",
+      "icons": [
+        {
+          "src": "./icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "🧪 Simulasi",
+      "short_name": "Simulasi",
+      "description": "Simulasikan gangguan untuk demo",
+      "url": "./?tab=simulation",
+      "icons": [
+        {
+          "src": "./icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Pengaturan",
+      "short_name": "Setting",
+      "description": "Konfigurasi batas proteksi",
+      "url": "./?tab=settings",
+      "icons": [
+        {
+          "src": "./icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
