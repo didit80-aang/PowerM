@@ -6,7 +6,6 @@
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "fullscreen", "minimal-ui"],
-  "orientation": "portrait",
   "background_color": "#667eea",
   "theme_color": "#667eea",
   "categories": ["utilities", "monitoring", "productivity"],
