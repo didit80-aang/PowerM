@@ -1,0 +1,3680 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover, shrink-to-fit=no">
+    <title>⚡ Sistem Monitoring Daya - Monitoring AC dengan Kontrol Relay</title>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PowerMon">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="PowerMon">
+    <meta name="description" content="Monitoring Daya AC Real-time dengan Kontrol Relay & Proteksi Otomatis">
+    <meta name="screen-orientation" content="portrait">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+    </script>
+    
+    <style>
+        :root {
+            /* Light Theme (Default) */
+            --bg-primary: #f0f2f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f8f9fa;
+            --bg-card: #ffffff;
+            --bg-input: #ffffff;
+            --bg-hover: #f3f4f6;
+            
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --text-inverse: #ffffff;
+            
+            --border-color: #e5e7eb;
+            --border-hover: #d1d5db;
+            
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 8px 25px rgba(0,0,0,0.1);
+            --shadow-lg: 0 12px 35px rgba(0,0,0,0.15);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.2);
+            
+            /* Brand Colors */
+            --brand-primary: #6366f1;
+            --brand-primary-dark: #4f46e5;
+            --brand-secondary: #8b5cf6;
+            --brand-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            
+            /* Status Colors */
+            --color-success: #10b981;
+            --color-success-dark: #059669;
+            --color-warning: #f59e0b;
+            --color-warning-dark: #d97706;
+            --color-danger: #ef4444;
+            --color-danger-dark: #dc2626;
+            --color-info: #3b82f6;
+            --color-info-dark: #2563eb;
+            
+            /* Gauge Colors */
+            --gauge-normal: #6366f1;
+            --gauge-warning: #f59e0b;
+            --gauge-danger: #ef4444;
+            --gauge-bg: #e5e7eb;
+            --gauge-bg-dark: #374151;
+            
+            /* Card/Component */
+            --card-radius: 16px;
+            --btn-radius: 10px;
+            --badge-radius: 20px;
+            
+            /* Transitions */
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s ease;
+            --transition-slow: 0.5s ease;
+            
+            /* Body gradient - SMOOTH VERSION */
+            --body-gradient: linear-gradient(160deg, #667eea 0%, #6b47b5 30%, #764ba2 60%, #7c4f9e 100%);
+            --header-text-color: #ffffff;
+
+            /* Custom background palette (independent) */
+            --bg-custom-gradient: none;
+            --bg-custom-card: none;
+            
+            /* Container sizing */
+            --container-max-width: 600px;
+            --container-min-width: 320px;
+        }
+
+        /* Dark Theme */
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #1a2235;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            --bg-hover: #334155;
+            
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --text-inverse: #ffffff;
+            
+            --border-color: #334155;
+            --border-hover: #475569;
+            
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-md: 0 8px 25px rgba(0,0,0,0.4);
+            --shadow-lg: 0 12px 35px rgba(0,0,0,0.5);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.6);
+            
+            --body-gradient: linear-gradient(160deg, #0f172a 0%, #12182d 30%, #1a1630 60%, #1e1b4b 100%);
+            --header-text-color: #e2e8f0;
+            
+            --gauge-bg: #334155;
+            --gauge-bg-dark: #1e293b;
+
+            /* Fix history row colors for dark mode */
+            --fault-row-bg: rgba(239, 68, 68, 0.15);
+            --fault-row-hover: rgba(239, 68, 68, 0.25);
+            --fault-cleared-row-bg: rgba(16, 185, 129, 0.15);
+            --fault-cleared-row-hover: rgba(16, 185, 129, 0.25);
+        }
+
+        /* Light theme overrides for history rows */
+        [data-theme="light"] {
+            --fault-row-bg: #fee2e2;
+            --fault-row-hover: #fecaca;
+            --fault-cleared-row-bg: #d1fae5;
+            --fault-cleared-row-hover: #a7f3d0;
+        }
+
+        /* Custom Color Palette Classes */
+        [data-palette="ocean"] {
+            --brand-primary: #0ea5e9;
+            --brand-primary-dark: #0284c7;
+            --brand-secondary: #06b6d4;
+            --brand-gradient: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+            --gauge-normal: #0ea5e9;
+        }
+
+        [data-palette="forest"] {
+            --brand-primary: #22c55e;
+            --brand-primary-dark: #16a34a;
+            --brand-secondary: #10b981;
+            --brand-gradient: linear-gradient(135deg, #22c55e 0%, #059669 100%);
+            --gauge-normal: #22c55e;
+        }
+
+        [data-palette="sunset"] {
+            --brand-primary: #f97316;
+            --brand-primary-dark: #ea580c;
+            --brand-secondary: #ef4444;
+            --brand-gradient: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+            --gauge-normal: #f97316;
+        }
+
+        [data-palette="purple"] {
+            --brand-primary: #a855f7;
+            --brand-primary-dark: #9333ea;
+            --brand-secondary: #7c3aed;
+            --brand-gradient: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+            --gauge-normal: #a855f7;
+        }
+
+        [data-palette="rose"] {
+            --brand-primary: #f43f5e;
+            --brand-primary-dark: #e11d48;
+            --brand-secondary: #fb7185;
+            --brand-gradient: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+            --gauge-normal: #f43f5e;
+        }
+
+        [data-palette="amber"] {
+            --brand-primary: #f59e0b;
+            --brand-primary-dark: #d97706;
+            --brand-secondary: #fbbf24;
+            --brand-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            --gauge-normal: #f59e0b;
+        }
+
+        /* Custom background themes - SMOOTH VERSIONS */
+        [data-bg-palette="bg-ocean"] {
+            --body-gradient: linear-gradient(160deg, #0c4a6e 0%, #0d5c82 35%, #0e7490 65%, #0f8aa3 100%);
+        }
+        [data-bg-palette="bg-forest"] {
+            --body-gradient: linear-gradient(160deg, #14532d 0%, #155e35 35%, #064e3b 65%, #075e48 100%);
+        }
+        [data-bg-palette="bg-sunset"] {
+            --body-gradient: linear-gradient(160deg, #7c2d12 0%, #8b3a1a 35%, #991b1b 65%, #a52121 100%);
+        }
+        [data-bg-palette="bg-purple"] {
+            --body-gradient: linear-gradient(160deg, #4c1d95 0%, #5320a3 35%, #5b21b6 65%, #6428c4 100%);
+        }
+        [data-bg-palette="bg-rose"] {
+            --body-gradient: linear-gradient(160deg, #881337 0%, #931641 35%, #9b1d45 60%, #4c0519 100%);
+        }
+        [data-bg-palette="bg-amber"] {
+            --body-gradient: linear-gradient(160deg, #78350f 0%, #854015 35%, #964a18 60%, #451a03 100%);
+        }
+        [data-bg-palette="bg-default"] {
+            --body-gradient: linear-gradient(160deg, #667eea 0%, #6b47b5 30%, #764ba2 60%, #7c4f9e 100%);
+        }
+        [data-theme="dark"][data-bg-palette="bg-default"] {
+            --body-gradient: linear-gradient(160deg, #0f172a 0%, #12182d 30%, #1a1630 60%, #1e1b4b 100%);
+        }
+
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+
+        /* ============ OPTIMALISASI LAYOUT RESPONSIF ============ */
+        html {
+            width: 100%;
+            height: 100%;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--body-gradient);
+            background-attachment: fixed;
+            position: relative;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            padding: 10px;
+            padding-bottom: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            transition: background var(--transition-slow);
+            overflow-x: hidden;
+            width: 100%;
+        }
+        
+        /* SMOOTH GRADIENT OVERLAY */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: inherit;
+            filter: blur(60px) saturate(1.2);
+            opacity: 0.15;
+            z-index: -1;
+            pointer-events: none;
+        }
+        
+        /* Noise texture */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 256px 256px;
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        /* Container responsif */
+        .container { 
+            max-width: var(--container-max-width);
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* HAPTIC TOGGLE BUTTON - DIPINDAHKAN KE CARD HEADER */
+        .haptic-toggle-inline {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            font-size: 1em;
+            transition: all var(--transition-fast);
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .haptic-toggle-inline:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-hover);
+            transform: scale(1.1);
+        }
+
+        .haptic-toggle-inline.active {
+            background: var(--brand-primary);
+            color: white;
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+        }
+
+        .haptic-toggle-inline.active.fault-active-haptic {
+            animation: hapticGlowPulse 0.8s infinite;
+            background: var(--color-danger);
+            border-color: var(--color-danger);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        }
+
+        @keyframes hapticGlowPulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.7); }
+        }
+
+        /* LAYOUT RESPONSIF UNTUK BERBAGAI DEVICE */
+        @media screen and (max-width: 480px) {
+            :root {
+                --container-max-width: 100%;
+                --container-min-width: auto;
+            }
+            body {
+                padding: 8px;
+                padding-bottom: 70px;
+            }
+            .container {
+                max-width: 100%;
+            }
+            .parameter-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+        }
+        
+        @media screen and (min-width: 481px) and (max-width: 768px) {
+            :root {
+                --container-max-width: 540px;
+            }
+            body {
+                padding: 12px;
+                padding-bottom: 80px;
+            }
+            .parameter-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+        }
+        
+        @media screen and (min-width: 769px) and (max-width: 1024px) {
+            :root {
+                --container-max-width: 700px;
+            }
+            body {
+                padding: 16px;
+                padding-bottom: 40px;
+            }
+            .container {
+                max-width: 700px;
+            }
+            .parameter-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+            }
+            .dashboard-grid {
+                gap: 16px;
+            }
+            .gauge-container {
+                max-width: 180px;
+                height: 130px;
+            }
+        }
+        
+        @media screen and (min-width: 1025px) {
+            :root {
+                --container-max-width: 800px;
+            }
+            body {
+                padding: 20px;
+                padding-bottom: 30px;
+                align-items: center;
+                min-height: 100vh;
+            }
+            .container {
+                max-width: 800px;
+            }
+            .parameter-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 18px;
+            }
+            .dashboard-grid {
+                gap: 18px;
+            }
+            .gauge-container {
+                max-width: 200px;
+                height: 140px;
+            }
+            .tabs {
+                justify-content: center;
+            }
+            .tab-btn {
+                flex: 0 1 auto;
+                padding: 10px 24px;
+            }
+            .settings-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media screen and (min-width: 1600px) {
+            :root {
+                --container-max-width: 900px;
+            }
+            .container {
+                max-width: 900px;
+            }
+            .parameter-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+            }
+            .card {
+                padding: 25px;
+            }
+        }
+
+        @media screen and (max-height: 500px) and (orientation: landscape) {
+            body {
+                padding: 6px;
+                padding-bottom: 20px;
+                align-items: flex-start;
+            }
+            .container {
+                max-width: 100%;
+            }
+            .header {
+                margin-bottom: 8px;
+                padding: 5px 0;
+            }
+            .header h1 {
+                font-size: 1.1em;
+            }
+            .header p {
+                font-size: 0.7em;
+            }
+            .tabs {
+                margin-bottom: 8px;
+                padding: 5px;
+            }
+            .tab-btn {
+                padding: 6px 12px;
+                font-size: 0.75em;
+            }
+            .dashboard-grid {
+                gap: 8px;
+                margin-bottom: 8px;
+            }
+            .card {
+                padding: 10px;
+            }
+            .parameter-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            .gauge-container {
+                height: 90px;
+                max-width: 120px;
+            }
+        }
+
+        .header {
+            text-align: center;
+            color: var(--header-text-color);
+            margin-bottom: 15px;
+            padding: 10px 0;
+            transition: color var(--transition-normal);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-size: clamp(1.3em, 4vw, 2em);
+            margin-bottom: 3px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: clamp(0.8em, 2vw, 0.95em);
+            margin-bottom: 5px;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 12px;
+            border-radius: var(--badge-radius);
+            font-size: 0.8em;
+            font-weight: bold;
+            white-space: nowrap;
+            transition: all var(--transition-normal);
+        }
+
+        .connected { 
+            background: var(--color-success); 
+            color: white; 
+        }
+        
+        .disconnected { 
+            background: var(--color-danger); 
+            color: white; 
+            animation: pulse 2s infinite; 
+        }
+
+        .connecting { 
+            background: var(--color-warning); 
+            color: white; 
+            animation: pulse 1s infinite; 
+        }
+
+        .device-online { 
+            background: var(--color-success); 
+            color: white; 
+        }
+        
+        .device-offline { 
+            background: var(--color-danger); 
+            color: white; 
+            animation: pulse 1.5s infinite; 
+        }
+
+        .rssi-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 4px 10px;
+            border-radius: var(--badge-radius);
+            font-size: 0.8em;
+            font-weight: bold;
+            white-space: nowrap;
+            transition: all var(--transition-normal);
+        }
+
+        .rssi-excellent { background: var(--color-success); color: white; }
+        .rssi-good { background: var(--color-info); color: white; }
+        .rssi-fair { background: var(--color-warning); color: white; }
+        .rssi-poor { background: var(--color-danger); color: white; }
+        .rssi-offline { background: var(--text-muted); color: white; }
+
+        .memory-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 4px 10px;
+            border-radius: var(--badge-radius);
+            font-size: 0.8em;
+            font-weight: bold;
+            white-space: nowrap;
+            transition: all var(--transition-normal);
+        }
+
+        .memory-good { background: var(--color-success); color: white; }
+        .memory-moderate { background: var(--color-warning); color: white; }
+        .memory-low { background: var(--color-danger); color: white; }
+        .memory-offline { background: var(--text-muted); color: white; }
+
+        .priority-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: bold;
+            background: var(--color-warning);
+            color: white;
+            animation: autoGlow 2s infinite;
+        }
+
+        .simulation-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: bold;
+            background: #ffc107;
+            color: #000;
+            animation: pulse 1s infinite;
+        }
+
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 15px;
+            background: var(--bg-card);
+            border-radius: var(--card-radius);
+            padding: 8px;
+            box-shadow: var(--shadow-md);
+            transition: all var(--transition-normal);
+            position: relative;
+            z-index: 1;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: var(--btn-radius);
+            font-size: 0.9em;
+            font-weight: bold;
+            transition: all var(--transition-normal);
+            flex: 1;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .tab-btn.active { 
+            background: var(--brand-primary); 
+            color: white; 
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .tab-btn:hover:not(.active) { 
+            background: var(--bg-hover); 
+        }
+
+        .tab-content { 
+            display: none;
+            animation: fadeIn 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .tab-content.active { 
+            display: block; 
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--card-radius);
+            padding: clamp(12px, 2.5vw, 20px);
+            box-shadow: var(--shadow-md);
+            transition: all var(--transition-normal);
+            animation: slideIn 0.5s ease;
+            border: 1px solid var(--border-color);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Card shake animation for fault */
+        .card.fault-shake {
+            animation: faultShake 0.6s ease, slideIn 0.5s ease;
+        }
+
+        @keyframes faultShake {
+            0%, 100% { transform: translateX(0); }
+            10% { transform: translateX(-8px) rotate(-1deg); }
+            20% { transform: translateX(8px) rotate(1deg); }
+            30% { transform: translateX(-6px) rotate(-0.5deg); }
+            40% { transform: translateX(6px) rotate(0.5deg); }
+            50% { transform: translateX(-4px); }
+            60% { transform: translateX(4px); }
+            70% { transform: translateX(-2px); }
+            80% { transform: translateX(2px); }
+            90% { transform: translateX(-1px); }
+        }
+
+        .card:hover { 
+            transform: translateY(-3px); 
+            box-shadow: var(--shadow-lg); 
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .card-header h2 { 
+            font-size: clamp(1em, 3vw, 1.3em); 
+            color: var(--text-primary); 
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* ============ RELAY CONTROL REDESIGN ============ */
+        .relay-control {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .action-btn-circle {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            font-size: 0.7em;
+            font-weight: bold;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            position: relative;
+            overflow: hidden;
+            outline: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            white-space: nowrap;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .action-btn-circle::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .action-btn-circle:active::before {
+            width: 200px;
+            height: 200px;
+        }
+
+        .action-btn-circle:active {
+            transform: scale(0.9);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .action-btn-circle .btn-icon {
+            font-size: 1.4em;
+            line-height: 1;
+            transition: transform 0.2s ease;
+        }
+
+        .action-btn-circle .btn-label {
+            font-size: 0.65em;
+            line-height: 1;
+            letter-spacing: 0.3px;
+        }
+
+        .action-btn-circle:active .btn-icon {
+            transform: scale(0.85);
+        }
+
+        .action-btn-circle.manual-btn {
+            background: linear-gradient(135deg, var(--color-success), var(--color-success-dark));
+            color: white;
+            border-color: var(--color-success-dark);
+        }
+
+        .action-btn-circle.manual-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, var(--color-success-dark), #047857);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .action-btn-circle.manual-btn.manual-off-state {
+            background: linear-gradient(135deg, var(--color-danger), var(--color-danger-dark));
+            border-color: var(--color-danger-dark);
+        }
+
+        .action-btn-circle.manual-btn.manual-off-state:hover:not(:disabled) {
+            background: linear-gradient(135deg, var(--color-danger-dark), #b91c1c);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .action-btn-circle.manual-btn.manual-fault-state {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+            border-color: #4b5563;
+            cursor: not-allowed;
+        }
+
+        .action-btn-circle.reset-btn {
+            background: linear-gradient(135deg, var(--color-info), var(--color-info-dark));
+            color: white;
+            border-color: var(--color-info-dark);
+        }
+
+        .action-btn-circle.reset-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, var(--color-info-dark), #1d4ed8);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .action-btn-circle:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(30%);
+            transform: none !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        }
+
+        .relay-status-pill {
+            padding: 8px 16px;
+            border-radius: var(--badge-radius);
+            font-size: 0.8em;
+            font-weight: bold;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all var(--transition-normal);
+            border: 2px solid transparent;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .relay-status-pill.on { background: #d1fae5; color: #065f46; border-color: var(--color-success); }
+        .relay-status-pill.off { background: #fee2e2; color: #991b1b; border-color: var(--color-danger); }
+        .relay-status-pill.auto-on { background: #d1fae5; color: #065f46; border-color: var(--color-success); box-shadow: 0 0 12px rgba(16, 185, 129, 0.2); animation: autoGlowPill 2s infinite; }
+        .relay-status-pill.auto-off { background: #fee2e2; color: #991b1b; border-color: var(--color-danger); animation: autoGlowPill 2s infinite; }
+        .relay-status-pill.tripped { background: #fef3c7; color: #92400e; border-color: var(--color-warning); animation: faultBlinkPill 0.8s infinite; box-shadow: 0 0 15px rgba(245, 158, 11, 0.3); }
+        .relay-status-pill.waiting { background: var(--bg-tertiary); color: var(--text-muted); border-color: var(--text-muted); animation: pulse 2s infinite; }
+
+        .relay-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .relay-status-dot.on-dot { background: var(--color-success); box-shadow: 0 0 6px rgba(16, 185, 129, 0.5); }
+        .relay-status-dot.off-dot { background: var(--color-danger); box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
+        .relay-status-dot.tripped-dot { background: var(--color-warning); box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); animation: faultBlink 0.8s infinite; }
+        .relay-status-dot.waiting-dot { background: var(--text-muted); animation: pulse 2s infinite; }
+
+        .protection-badge {
+            padding: 5px 12px;
+            border-radius: var(--badge-radius);
+            font-size: 0.7em;
+            font-weight: bold;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all var(--transition-normal);
+        }
+
+        .protection-badge.overvoltage { background: #fee2e2; color: #991b1b; border: 1px solid var(--color-danger); animation: faultBlink 0.8s infinite; box-shadow: 0 0 12px rgba(239, 68, 68, 0.3); }
+        .protection-badge.overcurrent { background: #fef3c7; color: #92400e; border: 1px solid var(--color-warning); animation: faultBlink 0.8s infinite; box-shadow: 0 0 12px rgba(245, 158, 11, 0.3); }
+        .protection-badge.normal { background: #d1fae5; color: #065f46; border: 1px solid var(--color-success); }
+        .protection-badge.fault { background: #fee2e2; color: #991b1b; border: 1px solid var(--color-danger); animation: faultBlink 0.5s infinite; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+        .protection-badge.waiting { background: var(--bg-tertiary); color: var(--text-muted); border: 1px solid var(--text-muted); }
+
+        /* ============ PARAMETER GRID ============ */
+        .parameter-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .param-item {
+            text-align: center;
+            padding: 15px 10px;
+            background: var(--bg-tertiary);
+            border-radius: var(--card-radius);
+            transition: all var(--transition-normal);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .param-item:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .param-item.protection-warning {
+            background: #fee2e2;
+            border: 2px solid var(--color-danger);
+            animation: warningPulse 1.5s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .param-item.waiting-state {
+            background: var(--bg-tertiary);
+            border: 1px dashed var(--text-muted);
+        }
+
+        .param-label {
+            font-size: clamp(0.7em, 2vw, 0.8em);
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        /* ============ GAUGE CONTAINER ============ */
+        .gauge-container {
+            position: relative;
+            width: 100%;
+            max-width: 200px;
+            height: 140px;
+            margin: 8px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gauge-canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .gauge-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            color: var(--text-muted);
+            font-size: 0.9em;
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+
+        .param-value {
+            font-size: clamp(1.1em, 3vw, 1.4em);
+            font-weight: bold;
+            color: var(--text-primary);
+            transition: all var(--transition-normal);
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .param-value-text {
+            display: inline-block;
+            transition: all var(--transition-normal);
+        }
+
+        .param-unit { 
+            font-size: 0.6em; 
+            color: var(--text-muted); 
+            margin-left: 2px;
+            font-weight: 500;
+        }
+        
+        .warning-text { 
+            font-size: 0.7em; 
+            color: var(--color-danger); 
+            margin-top: 6px; 
+            font-weight: bold;
+            animation: textPulse 1s infinite;
+            min-height: 20px;
+        }
+
+        .badge-container {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .settings-panel {
+            background: var(--bg-card);
+            border-radius: var(--card-radius);
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-md);
+            animation: slideIn 0.5s ease;
+            border: 1px solid var(--border-color);
+            position: relative;
+            z-index: 1;
+        }
+
+        .settings-panel h3 {
+            font-size: clamp(1em, 2.5vw, 1.2em);
+            margin-bottom: 15px;
+            color: var(--text-primary);
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .setting-item {
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: var(--btn-radius);
+            border: 1px solid var(--border-color);
+            transition: all var(--transition-normal);
+        }
+
+        .setting-item:hover {
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .setting-item label {
+            display: block;
+            font-weight: bold;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            font-size: 0.85em;
+        }
+
+        .setting-item .input-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .setting-item input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: all var(--transition-normal);
+            min-width: 0;
+            background: var(--bg-input);
+            color: var(--text-primary);
+        }
+
+        .setting-item input:focus {
+            outline: none;
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+        }
+
+        .setting-item .input-unit {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .setting-item button {
+            width: 100%;
+            padding: 8px;
+            background: var(--brand-primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85em;
+            transition: all var(--transition-normal);
+            margin-top: 6px;
+        }
+
+        .setting-item button:hover { 
+            background: var(--brand-primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(99, 102, 241, 0.3);
+        }
+
+        .limit-value {
+            margin-top: 6px;
+            font-size: 0.8em;
+            color: var(--text-secondary);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.85em;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: var(--text-primary);
+            font-weight: bold;
+        }
+
+        .memory-info-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .memory-card {
+            padding: 15px;
+            background: var(--bg-tertiary);
+            border-radius: var(--btn-radius);
+            border: 1px solid var(--border-color);
+            transition: all var(--transition-normal);
+        }
+
+        .memory-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .memory-card-title {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .memory-bar-container {
+            background: var(--border-color);
+            border-radius: 8px;
+            height: 24px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 8px;
+        }
+
+        .memory-bar {
+            height: 100%;
+            border-radius: 8px;
+            transition: all var(--transition-slow);
+            min-width: 0;
+        }
+
+        .memory-bar-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.75em;
+            font-weight: bold;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .memory-detail {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8em;
+            color: var(--text-secondary);
+        }
+
+        .memory-detail-value {
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .chart-container {
+            background: var(--bg-card);
+            border-radius: var(--card-radius);
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-md);
+            animation: slideIn 0.5s ease;
+            border: 1px solid var(--border-color);
+            position: relative;
+            z-index: 1;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: clamp(200px, 35vh, 300px);
+            min-height: 200px;
+            width: 100%;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .chart-header h3 {
+            font-size: clamp(0.9em, 2.5vw, 1.1em);
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .chart-controls { 
+            display: flex; 
+            gap: 4px; 
+            flex-wrap: wrap; 
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: var(--btn-radius);
+            background: var(--brand-primary);
+            color: white;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            font-weight: bold;
+            font-size: 0.75em;
+            white-space: nowrap;
+        }
+
+        .btn:hover { 
+            background: var(--brand-primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn.active { 
+            background: var(--brand-secondary);
+            box-shadow: 0 3px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .sim-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: var(--btn-radius);
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9em;
+            transition: all var(--transition-normal);
+            width: 100%;
+            margin-top: 8px;
+            color: white;
+        }
+
+        .sim-btn.overvoltage-btn { background: var(--color-danger); }
+        .sim-btn.overvoltage-btn:hover { background: var(--color-danger-dark); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4); }
+        .sim-btn.overcurrent-btn { background: var(--color-warning); }
+        .sim-btn.overcurrent-btn:hover { background: var(--color-warning-dark); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4); }
+        .sim-btn.both-btn { background: var(--color-danger-dark); }
+        .sim-btn.both-btn:hover { background: #b91c1c; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(220, 38, 38, 0.5); }
+        .sim-btn.stop-btn { background: var(--color-success); }
+        .sim-btn.stop-btn:hover { background: var(--color-success-dark); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4); }
+
+        .demo-scenario {
+            background: var(--bg-tertiary);
+            border: 1px solid #86efac;
+            padding: 15px;
+            border-radius: var(--btn-radius);
+            margin-top: 12px;
+        }
+
+        .demo-scenario ol {
+            padding-left: 20px;
+            line-height: 2;
+            font-size: 0.9em;
+            color: var(--text-primary);
+        }
+
+        .demo-scenario ol li strong {
+            color: var(--brand-primary);
+        }
+
+        .system-diagram {
+            background: var(--bg-tertiary);
+            padding: 15px;
+            border-radius: var(--btn-radius);
+            border: 1px solid var(--border-color);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7em;
+            overflow-x: auto;
+            white-space: pre;
+            color: var(--text-primary);
+        }
+
+        .feature-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.85em;
+        }
+
+        .feature-table tr {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .feature-table tr:nth-child(even) {
+            background: var(--bg-tertiary);
+        }
+
+        .feature-table td {
+            padding: 8px 12px;
+            color: var(--text-primary);
+        }
+
+        /* Data Logger Styles */
+        .data-logger-container {
+            background: var(--bg-card);
+            border-radius: var(--card-radius);
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-md);
+            animation: slideIn 0.5s ease;
+            border: 1px solid var(--border-color);
+            position: relative;
+            z-index: 1;
+        }
+
+        .logger-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .logger-header h3 {
+            font-size: clamp(0.9em, 2.5vw, 1.1em);
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logger-controls {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .logger-stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .logger-stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8em;
+            color: var(--text-secondary);
+        }
+
+        .logger-stat-value {
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: var(--btn-radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .logger-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.7em;
+            min-width: 800px;
+        }
+
+        .logger-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .logger-table th {
+            background: var(--brand-primary);
+            color: white;
+            padding: 8px 6px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.8em;
+            white-space: nowrap;
+        }
+
+        .logger-table td {
+            padding: 6px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+            color: var(--text-primary);
+        }
+
+        .logger-table tbody tr {
+            transition: all var(--transition-normal);
+        }
+
+        .logger-table tbody tr:hover {
+            background: var(--bg-hover);
+        }
+
+        .logger-table tbody tr.fault-row {
+            background: var(--fault-row-bg);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .logger-table tbody tr.fault-row:hover {
+            background: var(--fault-row-hover);
+        }
+
+        .logger-table tbody tr.fault-cleared-row {
+            background: var(--fault-cleared-row-bg);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .logger-table tbody tr.fault-cleared-row:hover {
+            background: var(--fault-cleared-row-hover);
+        }
+
+        .fault-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75em;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .fault-tag.active { background: var(--color-danger); color: white; animation: faultBlink 1s infinite; }
+        .fault-tag.overvoltage { background: var(--color-danger); color: white; animation: faultBlink 0.8s infinite; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
+        .fault-tag.overcurrent { background: var(--color-warning); color: white; animation: faultBlink 0.8s infinite; box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
+        .fault-tag.multiple { background: var(--color-danger-dark); color: white; animation: faultBlink 0.5s infinite; box-shadow: 0 0 12px rgba(220, 38, 38, 0.5); }
+        .fault-tag.cleared { background: var(--color-success); color: white; }
+        .fault-tag.normal { background: var(--bg-tertiary); color: var(--text-secondary); }
+
+        .fault-detail {
+            font-size: 0.7em;
+            color: var(--text-secondary);
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        .event-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+
+        .event-indicator.fault-start { background: var(--color-danger); box-shadow: 0 0 8px rgba(239, 68, 68, 0.5); }
+        .event-indicator.fault-end { background: var(--color-success); box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+
+        .fault-message {
+            background: #fee2e2;
+            border-left: 4px solid var(--color-danger);
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: bold;
+            animation: slideDown 0.5s ease;
+            box-shadow: 0 3px 12px rgba(239, 68, 68, 0.15);
+            color: #991b1b;
+        }
+
+        .no-data-message {
+            background: var(--bg-tertiary);
+            border-left: 4px solid var(--text-muted);
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            animation: slideDown 0.5s ease;
+            text-align: center;
+        }
+
+        .priority-info {
+            background: #fffbeb;
+            border-left: 4px solid var(--color-warning);
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            font-size: 0.8em;
+            color: #92400e;
+        }
+
+        .simulation-info {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            font-size: 0.8em;
+            color: #856404;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .pwa-install-prompt {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            background: var(--bg-card);
+            padding: 15px 20px;
+            border-radius: var(--card-radius);
+            box-shadow: var(--shadow-xl);
+            z-index: 9998;
+            display: none;
+            animation: slideIn 0.5s ease;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            max-width: 280px;
+        }
+
+        .pwa-install-prompt button {
+            margin: 5px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: var(--btn-radius);
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .pwa-install-prompt .install-btn {
+            background: var(--brand-primary);
+            color: white;
+        }
+
+        .pwa-install-prompt .dismiss-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .footer {
+            text-align: center;
+            color: var(--header-text-color);
+            padding: 15px;
+            padding-bottom: 30px;
+            font-size: 0.8em;
+            opacity: 0.85;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer p {
+            margin-bottom: 3px;
+        }
+
+        /* ============ FAB COLOR PALETTE PICKER ============ */
+        .fab-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: flex-end;
+            gap: 12px;
+        }
+
+        .fab-main {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            box-shadow: var(--shadow-xl);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            position: relative;
+            z-index: 2;
+            background: var(--brand-gradient);
+            color: white;
+        }
+
+        .fab-main:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.5);
+        }
+
+        .fab-main:active {
+            transform: scale(0.95);
+        }
+
+        .fab-main .fab-icon {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            line-height: 1;
+        }
+
+        .fab-container.active .fab-main .fab-icon {
+            transform: rotate(45deg);
+        }
+
+        .fab-menu {
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 10px;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: absolute;
+            bottom: 60px;
+            right: 0;
+        }
+
+        .fab-container.active .fab-menu {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .fab-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: -1;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .fab-container.active .fab-backdrop {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Color Palette Panel */
+        .color-palette-panel {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: var(--shadow-xl);
+            min-width: 260px;
+            max-width: 300px;
+            border: 1px solid var(--border-color);
+            animation: slideIn 0.3s ease;
+        }
+
+        .palette-section {
+            margin-bottom: 14px;
+        }
+
+        .palette-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .palette-section-title {
+            font-size: 0.7em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .theme-toggle-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8em;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .theme-toggle-btn.active {
+            border-color: var(--brand-primary);
+            background: var(--brand-primary);
+            color: white;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .theme-toggle-btn:hover:not(.active) {
+            border-color: var(--border-hover);
+            background: var(--bg-hover);
+        }
+
+        .theme-toggle-btn .theme-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+        }
+
+        .theme-toggle-btn.light-theme .theme-dot {
+            background: #fbbf24;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+        }
+
+        .theme-toggle-btn.dark-theme .theme-dot {
+            background: #6366f1;
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+        }
+
+        /* Color Palette Swatches */
+        .palette-swatches {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .color-swatch {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 3px solid transparent;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.15);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        .color-swatch.active {
+            border-color: var(--text-primary);
+            box-shadow: 0 0 0 3px var(--bg-card), 0 0 0 6px var(--brand-primary);
+            transform: scale(1.1);
+        }
+
+        .color-swatch.active::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        /* Individual Swatch Colors - SMOOTH GRADIENTS */
+        .swatch-default { background: linear-gradient(160deg, #667eea, #6b47b5, #764ba2, #7c4f9e); }
+        .swatch-ocean { background: linear-gradient(160deg, #0ea5e9, #0891b5, #0284c7, #0369a1); }
+        .swatch-forest { background: linear-gradient(160deg, #22c55e, #16a34a, #059669, #047857); }
+        .swatch-sunset { background: linear-gradient(160deg, #f97316, #ea580c, #ef4444, #dc2626); }
+        .swatch-purple { background: linear-gradient(160deg, #a855f7, #9333ea, #7c3aed, #6d28d9); }
+        .swatch-rose { background: linear-gradient(160deg, #f43f5e, #e11d48, #be123c, #9f1239); }
+        .swatch-amber { background: linear-gradient(160deg, #f59e0b, #d97706, #b45309, #92400e); }
+
+        /* Background swatches - SMOOTH */
+        .bg-swatch {
+            border: 2px solid var(--border-color);
+        }
+        .bg-swatch.bg-default { background: linear-gradient(160deg, #667eea, #6b47b5, #764ba2, #7c4f9e); }
+        .bg-swatch.bg-ocean { background: linear-gradient(160deg, #0c4a6e, #0d5c82, #0e7490, #0f8aa3); }
+        .bg-swatch.bg-forest { background: linear-gradient(160deg, #14532d, #155e35, #064e3b, #075e48); }
+        .bg-swatch.bg-sunset { background: linear-gradient(160deg, #7c2d12, #8b3a1a, #991b1b, #a52121); }
+        .bg-swatch.bg-purple { background: linear-gradient(160deg, #4c1d95, #5320a3, #5b21b6, #6428c4); }
+        .bg-swatch.bg-rose { background: linear-gradient(160deg, #881337, #931641, #9b1d45, #4c0519); }
+        .bg-swatch.bg-amber { background: linear-gradient(160deg, #78350f, #854015, #964a18, #451a03); }
+
+        /* Quick Preview Ring */
+        .quick-preview {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            align-items: center;
+        }
+
+        .preview-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            transition: all var(--transition-fast);
+        }
+
+        .preview-label {
+            font-size: 0.7em;
+            color: var(--text-muted);
+        }
+
+        /* Scrollbar Styles */
+        .table-wrapper::-webkit-scrollbar { height: 6px; width: 6px; }
+        .table-wrapper::-webkit-scrollbar-track { background: var(--border-color); border-radius: 3px; }
+        .table-wrapper::-webkit-scrollbar-thumb { background: var(--brand-primary); border-radius: 3px; }
+        .table-wrapper::-webkit-scrollbar-thumb:hover { background: var(--brand-primary-dark); }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); max-height: 0; } to { opacity: 1; transform: translateY(0); max-height: 200px; } }
+        @keyframes faultBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes faultBlinkPill { 0%, 100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.2); } 50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.5); } }
+        @keyframes warningPulse { 0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); transform: scale(1); } 50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.4); transform: scale(1.01); } }
+        @keyframes autoGlow { 0%, 100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.3); } 50% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.6); } }
+        @keyframes autoGlowPill { 0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.1); } 50% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @keyframes textPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+        @keyframes btnPressEffect { 0% { transform: scale(1); } 50% { transform: scale(0.88); } 100% { transform: scale(1); } }
+        @keyframes fabPulse { 0%, 100% { box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); } 50% { box-shadow: 0 4px 25px rgba(99, 102, 241, 0.6); } }
+        .updating { animation: valueUpdate 0.4s ease; }
+        @keyframes valueUpdate { 0% { transform: scale(1); } 50% { transform: scale(1.05); color: var(--brand-primary); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>⚡ Sistem Monitoring Daya</h1>
+            <p>📊 Monitoring AC Real-time dengan Kontrol Relay & Proteksi Otomatis</p>
+            
+            <div class="status-row">
+                <span class="status-badge connecting" id="connectionStatus">🟡 Menghubungkan...</span>
+                <span id="deviceStatusBadge" class="status-badge device-offline">📡 Offline</span>
+                <span id="rssiBadge" class="rssi-badge rssi-offline">📶 - dBm</span>
+                <span id="memoryBadge" class="memory-badge memory-offline">💾 -</span>
+                <span id="simulationBadge" class="simulation-badge" style="display:none;">🧪 SIMULASI</span>
+                <button class="btn" onclick="reconnectMQTT()" title="Hubungkan ulang MQTT">🔄 Reconnect</button>
+            </div>
+        </div>
+
+        <!-- PWA Install Prompt -->
+        <div id="pwaInstallPrompt" class="pwa-install-prompt">
+            <strong>📱 Pasang Aplikasi?</strong>
+            <p style="font-size: 0.85em; margin: 5px 0;">Pasang untuk akses cepat & penggunaan offline</p>
+            <button class="install-btn" onclick="installPWA()">✅ Pasang</button>
+            <button class="dismiss-btn" onclick="dismissInstall()">❌ Nanti</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('monitor')">📊 Monitor</button>
+            <button class="tab-btn" onclick="switchTab('logger')">📋 Pencatat Data</button>
+            <button class="tab-btn" onclick="switchTab('simulation')">🧪 Simulasi</button>
+            <button class="tab-btn" onclick="switchTab('settings')">⚙️ Pengaturan</button>
+            <button class="tab-btn" onclick="switchTab('about')">📖 Tentang</button>
+        </div>
+
+        <!-- Monitor Tab -->
+        <div id="monitorTab" class="tab-content active">
+            <div class="priority-info">
+                <strong>⚡ PRIORITAS AUTO TRIP:</strong> Proteksi otomatis memiliki prioritas tertinggi. 
+                Meskipun relay menyala manual, deteksi gangguan akan mematikan relay secara paksa.
+            </div>
+            
+            <div id="waitingForData" class="no-data-message">
+                <strong>⏳ Menunggu data dari ESP32...</strong><br>
+                Dashboard akan menampilkan data real-time begitu ESP32 terhubung dan mengirim data melalui MQTT.<br>
+                <span style="font-size: 0.8em;">Pastikan ESP32 menyala dan terhubung ke broker HiveMQ.</span>
+            </div>
+            
+            <div id="faultNotification" class="fault-message" style="display: none;"></div>
+            
+            <div class="dashboard-grid">
+                <div class="card" id="mainMonitorCard">
+                    <div class="card-header">
+                        <div class="card-header-left">
+                            <h2>🔌 Parameter AC <span class="priority-badge">⚡ AUTO TRIP AKTIF</span></h2>
+                            <!-- HAPTIC TOGGLE DIPINDAHKAN KE SINI -->
+                            <button class="haptic-toggle-inline active" id="hapticToggle" onclick="toggleHaptic()" title="Getar saat fault: AKTIF">
+                                📳
+                            </button>
+                        </div>
+                        <div class="relay-control">
+                            <button id="manualRelayBtn" class="action-btn-circle manual-btn manual-off-state" onclick="toggleManualRelay()" title="Menunggu data ESP32...">
+                                <span class="btn-icon" id="manualIcon">⏳</span>
+                                <span class="btn-label">Manual</span>
+                            </button>
+                            <button class="action-btn-circle reset-btn" onclick="sendCommand('reset_ac_fault')" title="Reset gangguan & kembalikan relay">
+                                <span class="btn-icon">🔄</span>
+                                <span class="btn-label">Reset</span>
+                            </button>
+                            <div class="relay-status-indicator">
+                                <span id="acRelayStatus" class="relay-status-pill waiting">
+                                    <span class="relay-status-dot waiting-dot"></span> ⏳ Menunggu Data
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="parameter-grid">
+                        <div class="param-item waiting-state" id="acVoltageItem">
+                            <div class="param-label">⚡ Tegangan</div>
+                            <div class="gauge-container" id="gaugeVoltageContainer">
+                                <div class="gauge-placeholder">⏳ Menunggu data...</div>
+                                <canvas id="gaugeVoltage" class="gauge-canvas" style="display:none;"></canvas>
+                            </div>
+                            <div class="param-value"><span class="param-value-text" id="acVoltage">--</span><span class="param-unit">V</span></div>
+                            <div class="warning-text" id="acVoltageWarning"></div>
+                        </div>
+                        <div class="param-item waiting-state" id="acCurrentItem">
+                            <div class="param-label">🔌 Arus</div>
+                            <div class="gauge-container" id="gaugeCurrentContainer">
+                                <div class="gauge-placeholder">⏳ Menunggu data...</div>
+                                <canvas id="gaugeCurrent" class="gauge-canvas" style="display:none;"></canvas>
+                            </div>
+                            <div class="param-value"><span class="param-value-text" id="acCurrent">--</span><span class="param-unit">A</span></div>
+                            <div class="warning-text" id="acCurrentWarning"></div>
+                        </div>
+                        <div class="param-item waiting-state">
+                            <div class="param-label">💡 Daya</div>
+                            <div class="gauge-container" id="gaugePowerContainer">
+                                <div class="gauge-placeholder">⏳ Menunggu data...</div>
+                                <canvas id="gaugePower" class="gauge-canvas" style="display:none;"></canvas>
+                            </div>
+                            <div class="param-value"><span class="param-value-text" id="acRealPower">--</span><span class="param-unit">W</span></div>
+                        </div>
+                        <div class="param-item waiting-state">
+                            <div class="param-label">📡 Frekuensi</div>
+                            <div class="gauge-container" id="gaugeFrequencyContainer">
+                                <div class="gauge-placeholder">⏳ Menunggu data...</div>
+                                <canvas id="gaugeFrequency" class="gauge-canvas" style="display:none;"></canvas>
+                            </div>
+                            <div class="param-value"><span class="param-value-text" id="acFrequency">--</span><span class="param-unit">Hz</span></div>
+                        </div>
+                        <div class="param-item waiting-state">
+                            <div class="param-label">📊 Faktor Daya</div>
+                            <div class="gauge-container" id="gaugePFContainer">
+                                <div class="gauge-placeholder">⏳ Menunggu data...</div>
+                                <canvas id="gaugePF" class="gauge-canvas" style="display:none;"></canvas>
+                            </div>
+                            <div class="param-value"><span class="param-value-text" id="acPF">--</span></div>
+                        </div>
+                        <div class="param-item waiting-state">
+                            <div class="param-label">🔋 Energi</div>
+                            <div class="gauge-container" id="gaugeEnergyContainer">
+                                <div class="gauge-placeholder">⏳ Menunggu data...</div>
+                                <canvas id="gaugeEnergy" class="gauge-canvas" style="display:none;"></canvas>
+                            </div>
+                            <div class="param-value"><span class="param-value-text" id="acEnergy">--</span><span class="param-unit">kWh</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="badge-container">
+                        <span id="acOvBadge" class="protection-badge waiting">⏳ Menunggu</span>
+                        <span id="acOcBadge" class="protection-badge waiting">⏳ Menunggu</span>
+                        <span id="acFaultBadge" class="protection-badge waiting">⏳ Menunggu Data</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3>📈 Data Real-time (10 pembacaan terakhir)</h3>
+                    <div class="chart-controls">
+                        <button class="btn active" onclick="switchChart('voltage')">⚡ Tegangan</button>
+                        <button class="btn" onclick="switchChart('current')">🔌 Arus</button>
+                        <button class="btn" onclick="switchChart('power')">💡 Daya</button>
+                        <button class="btn" onclick="switchChart('energy')">🔋 Energi</button>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="dataChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Pencatat Data -->
+        <div id="loggerTab" class="tab-content">
+            <div class="data-logger-container">
+                <div class="logger-header">
+                    <h3>📋 Riwayat Pencatat Data</h3>
+                    <div class="logger-controls">
+                        <button class="btn" onclick="exportLoggerData()">📥 Ekspor CSV</button>
+                        <button class="btn" onclick="clearLoggerData()" style="background: #ef4444;">🗑️ Hapus</button>
+                    </div>
+                </div>
+                <div class="logger-stats">
+                    <div class="logger-stat-item">📊 Total Data: <span class="logger-stat-value" id="totalRecords">0</span></div>
+                    <div class="logger-stat-item">⚡ Kejadian Gangguan: <span class="logger-stat-value" id="faultEvents">0</span></div>
+                    <div class="logger-stat-item">🟢 Gangguan Selesai: <span class="logger-stat-value" id="faultCleared">0</span></div>
+                </div>
+                <div id="faultSummary" class="priority-info" style="display: none; margin-bottom: 12px;">
+                    <strong>⚠️ Ringkasan Gangguan Terbaru:</strong>
+                    <span id="faultSummaryText"></span>
+                </div>
+                <div class="table-wrapper">
+                    <table class="logger-table">
+                        <thead>
+                            <tr>
+                                <th>No</th><th>Waktu</th><th>Tegangan (V)</th><th>Arus (A)</th>
+                                <th>Daya (W)</th><th>Frekuensi (Hz)</th><th>Energi (kWh)</th>
+                                <th>FP</th><th>Relay</th><th>Status Gangguan</th><th>Detail Gangguan</th><th>Kejadian</th>
+                            </tr>
+                        </thead>
+                        <tbody id="loggerTableBody">
+                            <tr><td colspan="12" style="text-align: center; color: var(--text-muted); padding: 20px;">📋 Menunggu data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Simulasi -->
+        <div id="simulationTab" class="tab-content">
+            <div class="simulation-info">
+                <strong>🧪 MODE DEMONSTRASI:</strong> Simulasikan kondisi fault untuk menunjukkan 
+                fitur auto-trip protection tanpa harus membuat fault sungguhan. Gunakan untuk presentasi sidang TA!
+            </div>
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header"><h2>🧪 Simulasi Gangguan</h2></div>
+                    <div class="parameter-grid">
+                        <div class="param-item">
+                            <div class="param-label">⚡ Overvoltage</div>
+                            <button class="sim-btn overvoltage-btn" onclick="sendCommand('simulate_overvoltage')">🔥 Simulasikan</button>
+                            <div style="font-size: 0.7em; margin-top: 5px; color: var(--text-secondary);">Tegangan > <span id="simOvLimit">260</span>V</div>
+                        </div>
+                        <div class="param-item">
+                            <div class="param-label">🔌 Overcurrent</div>
+                            <button class="sim-btn overcurrent-btn" onclick="sendCommand('simulate_overcurrent')">⚡ Simulasikan</button>
+                            <div style="font-size: 0.7em; margin-top: 5px; color: var(--text-secondary);">Arus > <span id="simOcLimit">10</span>A</div>
+                        </div>
+                        <div class="param-item">
+                            <div class="param-label">💥 Keduanya</div>
+                            <button class="sim-btn both-btn" onclick="sendCommand('simulate_both')">💀 Simulasikan</button>
+                            <div style="font-size: 0.7em; margin-top: 5px; color: var(--text-secondary);">Tegangan & Arus berlebih</div>
+                        </div>
+                        <div class="param-item">
+                            <div class="param-label">🛑 Hentikan</div>
+                            <button class="sim-btn stop-btn" onclick="sendCommand('stop_simulation')">✅ Stop Simulasi</button>
+                            <div style="font-size: 0.7em; margin-top: 5px; color: var(--text-secondary);">Kembali normal</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h2>📋 Skenario Demo Sidang TA</h2></div>
+                <div class="demo-scenario">
+                    <ol>
+                        <li><strong>Normal:</strong> Tunjukkan monitoring real-time semua parameter</li>
+                        <li><strong>Overvoltage:</strong> Klik "Simulasikan Overvoltage" → Relay auto-trip</li>
+                        <li><strong>Reset:</strong> Klik "Stop Simulasi" lalu "Reset" → Relay kembali ON</li>
+                        <li><strong>Overcurrent:</strong> Klik "Simulasikan Overcurrent" → Relay auto-trip</li>
+                        <li><strong>Manual Blocked:</strong> Coba klik "Manual" saat fault → Diblokir!</li>
+                        <li><strong>Both Faults:</strong> Klik "Simulasikan Keduanya" → Multiple fault</li>
+                        <li><strong>Mobile:</strong> Buka dashboard di smartphone → Tampilan responsif</li>
+                        <li><strong>Data Logger:</strong> Tunjukkan riwayat fault tersimpan otomatis</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Pengaturan -->
+        <div id="settingsTab" class="tab-content">
+            <div class="settings-panel">
+                <h3>🛡️ Batas Proteksi</h3>
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label>⚡ Batas Tegangan Lebih AC</label>
+                        <div class="input-group">
+                            <input type="number" id="acVoltageLimit" min="100" max="265" step="1" placeholder="100-265 V">
+                            <span class="input-unit">V</span>
+                        </div>
+                        <button onclick="setLimit('ac_v')">✅ Terapkan</button>
+                        <div class="limit-value">Saat ini: <span id="currentAcVLimit">--</span></div>
+                    </div>
+                    <div class="setting-item">
+                        <label>🔌 Batas Arus Lebih AC</label>
+                        <div class="input-group">
+                            <input type="number" id="acCurrentLimit" min="0.01" max="100" step="0.01" placeholder="0.01-100 A">
+                            <span class="input-unit">A</span>
+                        </div>
+                        <button onclick="setLimit('ac_i')">✅ Terapkan</button>
+                        <div class="limit-value">Saat ini: <span id="currentAcILimit">--</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-panel">
+                <h3>ℹ️ Informasi Sistem</h3>
+                <div class="info-row"><span class="info-label">🛡️ Status Proteksi</span><span class="info-value" id="protectionStatusText">--</span></div>
+                <div class="info-row"><span class="info-label">🔄 Status Relay</span><span class="info-value" id="acRelayMode">--</span></div>
+                <div class="info-row"><span class="info-label">⚠️ Status Gangguan</span><span class="info-value" id="acFaultStatus">--</span></div>
+                <div class="info-row"><span class="info-label">🧪 Mode Simulasi</span><span class="info-value" id="simulationStatus">--</span></div>
+                <div class="info-row"><span class="info-label">📡 Status Perangkat</span><span class="info-value" id="deviceConnectionInfo">--</span></div>
+                <div class="info-row"><span class="info-label">📶 Sinyal WiFi</span><span class="info-value" id="rssiInfo">--</span></div>
+                <div class="info-row"><span class="info-label">🔬 Mode Uji</span><span class="info-value" id="testModeStatus">--</span></div>
+                <div class="info-row"><span class="info-label">📱 Status PWA</span><span class="info-value" id="pwaStatus">--</span></div>
+                <div class="info-row"><span class="info-label">🔗 Status MQTT</span><span class="info-value" id="mqttConnectionInfo">--</span></div>
+                <div class="info-row"><span class="info-label">🔄 Reconnect Attempt</span><span class="info-value" id="reconnectAttemptInfo">0</span></div>
+                <div class="info-row"><span class="info-label">🎨 Tema Aktif</span><span class="info-value" id="activeThemeInfo">--</span></div>
+                <div class="info-row"><span class="info-label">🖌️ Palet Warna</span><span class="info-value" id="activePaletteInfo">--</span></div>
+                <div class="info-row"><span class="info-label">📳 Haptic Feedback</span><span class="info-value" id="hapticStatusInfo">AKTIF</span></div>
+            </div>
+            
+            <div class="settings-panel">
+                <h3>💾 Memori ESP32</h3>
+                <div class="memory-info-container">
+                    <div class="memory-card">
+                        <div class="memory-card-title">🧠 Total Memori Heap</div>
+                        <div class="memory-bar-container">
+                            <div class="memory-bar" id="heapBar" style="width: 0%; background: #667eea;"></div>
+                            <div class="memory-bar-text" id="heapBarText">-</div>
+                        </div>
+                        <div class="memory-detail"><span>Heap Total:</span><span class="memory-detail-value" id="heapTotal">-</span></div>
+                    </div>
+                    <div class="memory-card">
+                        <div class="memory-card-title">💾 Memori Tersisa</div>
+                        <div class="memory-bar-container">
+                            <div class="memory-bar" id="freeHeapBar" style="width: 0%; background: #10b981;"></div>
+                            <div class="memory-bar-text" id="freeHeapBarText">-</div>
+                        </div>
+                        <div class="memory-detail"><span>Heap Bebas:</span><span class="memory-detail-value" id="freeHeap">-</span></div>
+                    </div>
+                    <div class="memory-card">
+                        <div class="memory-card-title">📊 Persentase Terpakai</div>
+                        <div class="memory-bar-container">
+                            <div class="memory-bar" id="heapUsagePercentBar" style="width: 0%; background: #f59e0b;"></div>
+                            <div class="memory-bar-text" id="heapUsagePercentBarText">-</div>
+                        </div>
+                        <div class="memory-detail"><span>Heap Terpakai:</span><span class="memory-detail-value" id="heapUsed">-</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-panel">
+                <div class="action-buttons">
+                    <button class="btn" onclick="sendCommand('get_status')">🔄 Segarkan</button>
+                    <button class="btn" onclick="reconnectMQTT()">🔗 Reconnect MQTT</button>
+                    <button class="btn" onclick="sendCommand('reset_all_faults')" style="background: var(--color-danger);">⚠️ Reset Semua</button>
+                    <button class="btn" onclick="sendCommand('reset_energy')" style="background: var(--color-warning);">🔋 Reset Energi</button>
+                    <button class="btn" onclick="clearCache()" style="background: #6b7280;">🗑️ Hapus Cache</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Tentang -->
+        <div id="aboutTab" class="tab-content">
+            <div class="card">
+                <div class="card-header"><h2>📖 Tentang Sistem</h2></div>
+                <h3 style="color: var(--brand-primary); margin: 15px 0 10px 0;">🛠️ Arsitektur Sistem</h3>
+                <div class="system-diagram">
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌──────────────┐
+│  PZEM-004T  │────▶│   ESP32      │────▶│    MQTT     │────▶│     Web      │
+│   Sensor    │     │  Controller  │     │   Broker    │     │  Dashboard   │
+└─────────────┘     └──────┬───────┘     └─────────────┘     └──────────────┘
+                          │
+                    ┌─────▼──────┐
+                    │   Relay    │
+                    │  Module    │
+                    └────────────┘
+
+📡 Komunikasi: MQTT via HiveMQ Broker (WSS port 8884)
+🔌 Sensor: PZEM-004T v3.0 100A
+🎛️ Controller: ESP32 (FreeRTOS)
+🖥️ Dashboard: HTML5 + Chart.js + PWA</div>
+
+                <h3 style="color: var(--brand-primary); margin: 20px 0 10px 0;">✨ Fitur Utama</h3>
+                <table class="feature-table">
+                    <tr><td style="width: 40px;">📊</td><td><strong>Monitoring Real-time</strong></td><td>Tegangan, Arus, Daya, Frekuensi, Energi, Faktor Daya</td></tr>
+                    <tr><td>⚡</td><td><strong>Auto-Trip Protection</strong></td><td>Proteksi otomatis saat overvoltage/overcurrent</td></tr>
+                    <tr><td>🔄</td><td><strong>Kontrol Relay</strong></td><td>Tombol lingkaran Manual & Reset</td></tr>
+                    <tr><td>📋</td><td><strong>Data Logger</strong></td><td>Pencatatan otomatis dengan deteksi fault</td></tr>
+                    <tr><td>🧪</td><td><strong>Simulasi Fault</strong></td><td>Mode demo untuk presentasi</td></tr>
+                    <tr><td>📱</td><td><strong>PWA Support</strong></td><td>Dapat diinstal di smartphone</td></tr>
+                    <tr><td>🎨</td><td><strong>FAB Color Palette</strong></td><td>Picker tema & warna gauge interaktif</td></tr>
+                    <tr><td>📳</td><td><strong>Haptic Feedback</strong></td><td>Getar terus-menerus saat fault aktif (dapat dinonaktifkan)</td></tr>
+                </table>
+
+                <h3 style="color: var(--brand-primary); margin: 20px 0 10px 0;">📝 Catatan Versi</h3>
+                <div style="font-size: 0.9em; color: var(--text-primary); background: var(--bg-tertiary); padding: 15px; border-radius: 8px;">
+                    <p><strong>v7.8</strong> - Haptic Fault State Recovery:</p>
+                    <ul style="padding-left: 20px; line-height: 1.8;">
+                        <li>✅ Fault state DIPULIHKAN dari cache saat dashboard dibuka kembali</li>
+                        <li>✅ Haptic langsung menyala jika fault masih aktif (tanpa menunggu data MQTT)</li>
+                        <li>✅ Visibility change detection untuk restart haptic saat tab dibuka</li>
+                        <li>✅ Cache validasi 30 detik untuk mencegah false positive</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🔗 Broker HiveMQ (WSS) | 📊 Monitoring Real-time | 📱 Siap PWA</p>
+            <p>🛡️ Proteksi: AC &gt;<span id="acVlimitDisplay">260</span>V / &gt;= <span id="acIlimitDisplay">10</span>A</p>
+            <p>🎨 FAB Color Palette | 🌓 Dark/Light | 📳 Haptic Continuous</p>
+        </div>
+    </div>
+
+    <!-- ============ FAB COLOR PALETTE PICKER ============ -->
+    <div class="fab-container" id="fabContainer">
+        <div class="fab-backdrop" id="fabBackdrop" onclick="closeFab()"></div>
+        
+        <button class="fab-main" id="fabMain" onclick="toggleFab()" title="🎨 Kustomisasi Tema & Warna">
+            <span class="fab-icon">🎨</span>
+        </button>
+        
+        <div class="fab-menu">
+            <div class="color-palette-panel">
+                <div class="palette-section">
+                    <div class="palette-section-title">🌓 Mode Tema</div>
+                    <div class="theme-toggle-group">
+                        <button class="theme-toggle-btn light-theme active" id="themeLightBtn" onclick="setTheme('light')">
+                            <span class="theme-dot"></span> ☀️ Terang
+                        </button>
+                        <button class="theme-toggle-btn dark-theme" id="themeDarkBtn" onclick="setTheme('dark')">
+                            <span class="theme-dot"></span> 🌙 Gelap
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="palette-section">
+                    <div class="palette-section-title">🖌️ Palet Warna Gauge</div>
+                    <div class="palette-swatches" id="paletteSwatches">
+                        <div class="color-swatch swatch-default active" data-palette="default" onclick="setPalette('default')" title="Default (Ungu)"></div>
+                        <div class="color-swatch swatch-ocean" data-palette="ocean" onclick="setPalette('ocean')" title="Ocean (Biru)"></div>
+                        <div class="color-swatch swatch-forest" data-palette="forest" onclick="setPalette('forest')" title="Forest (Hijau)"></div>
+                        <div class="color-swatch swatch-sunset" data-palette="sunset" onclick="setPalette('sunset')" title="Sunset (Orange)"></div>
+                        <div class="color-swatch swatch-purple" data-palette="purple" onclick="setPalette('purple')" title="Purple (Ungu Tua)"></div>
+                        <div class="color-swatch swatch-rose" data-palette="rose" onclick="setPalette('rose')" title="Rose (Pink)"></div>
+                        <div class="color-swatch swatch-amber" data-palette="amber" onclick="setPalette('amber')" title="Amber (Kuning)"></div>
+                    </div>
+                </div>
+
+                <div class="palette-section">
+                    <div class="palette-section-title">🖼️ Palet Background</div>
+                    <div class="palette-swatches" id="bgPaletteSwatches">
+                        <div class="color-swatch bg-swatch bg-default active" data-bg-palette="bg-default" onclick="setBgPalette('bg-default')" title="Default"></div>
+                        <div class="color-swatch bg-swatch bg-ocean" data-bg-palette="bg-ocean" onclick="setBgPalette('bg-ocean')" title="Ocean"></div>
+                        <div class="color-swatch bg-swatch bg-forest" data-bg-palette="bg-forest" onclick="setBgPalette('bg-forest')" title="Forest"></div>
+                        <div class="color-swatch bg-swatch bg-sunset" data-bg-palette="bg-sunset" onclick="setBgPalette('bg-sunset')" title="Sunset"></div>
+                        <div class="color-swatch bg-swatch bg-purple" data-bg-palette="bg-purple" onclick="setBgPalette('bg-purple')" title="Purple"></div>
+                        <div class="color-swatch bg-swatch bg-rose" data-bg-palette="bg-rose" onclick="setBgPalette('bg-rose')" title="Rose"></div>
+                        <div class="color-swatch bg-swatch bg-amber" data-bg-palette="bg-amber" onclick="setBgPalette('bg-amber')" title="Amber"></div>
+                    </div>
+                </div>
+                
+                <div class="palette-section">
+                    <div class="palette-section-title">👁️ Preview Warna</div>
+                    <div class="quick-preview">
+                        <div class="preview-dot" id="previewGauge" style="background: var(--gauge-normal); width: 16px; height: 16px;"></div>
+                        <span class="preview-label">Gauge</span>
+                        <div class="preview-dot" id="previewBrand" style="background: var(--brand-primary); width: 16px; height: 16px;"></div>
+                        <span class="preview-label">Brand</span>
+                        <div class="preview-dot" id="previewBg" style="background: var(--bg-card); width: 16px; height: 16px; border: 1px solid var(--border-color);"></div>
+                        <span class="preview-label">Kartu</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ HAPTIC FEEDBACK SYSTEM (CONTINUOUS) ============
+        let hapticEnabled = localStorage.getItem('hapticEnabled') !== 'false';
+        let hapticInterval = null;
+        let isFaultActive = false;
+        let currentFaultType = null;
+        
+        function initHaptic() {
+            const toggle = document.getElementById('hapticToggle');
+            const statusInfo = document.getElementById('hapticStatusInfo');
+            
+            if (hapticEnabled) {
+                toggle.className = 'haptic-toggle-inline active';
+                toggle.title = 'Getar saat fault: AKTIF';
+                toggle.textContent = '📳';
+            } else {
+                toggle.className = 'haptic-toggle-inline';
+                toggle.title = 'Getar saat fault: NONAKTIF';
+                toggle.textContent = '🔇';
+            }
+            
+            if (statusInfo) {
+                statusInfo.textContent = hapticEnabled ? '📳 AKTIF' : '🔇 NONAKTIF';
+                statusInfo.style.color = hapticEnabled ? '#10b981' : '#ef4444';
+            }
+        }
+        
+        // TAMBAHKAN: Fungsi untuk memulihkan state fault dari cache
+        function restoreFaultStateFromCache() {
+            try {
+                const saved = localStorage.getItem('lastMonitoringData');
+                if (saved) {
+                    const { data, timestamp } = JSON.parse(saved);
+                    // Hanya gunakan data yang tidak lebih dari 30 detik
+                    if (data && data.ac && (Date.now() - timestamp) < 30000) {
+                        const acData = data.ac;
+                        const faultActive = acData.fault_active || false;
+                        
+                        if (faultActive) {
+                            console.log('📳 Memulihkan state fault dari cache:', acData);
+                            
+                            // Tentukan jenis fault
+                            let faultType = 'fault_start';
+                            if (acData.overvoltage && acData.overcurrent) faultType = 'multiple_fault';
+                            else if (acData.overvoltage) faultType = 'overvoltage';
+                            else if (acData.overcurrent) faultType = 'overcurrent';
+                            
+                            // Set state global
+                            isFaultActive = true;
+                            currentFaultType = faultType;
+                            previousFaultState = true;
+                            previousOvervoltage = acData.overvoltage || false;
+                            previousOvercurrent = acData.overcurrent || false;
+                            
+                            // Update UI fault notification
+                            const faultNotification = document.getElementById('faultNotification');
+                            if (faultNotification) {
+                                let msgs = [];
+                                if (acData.overvoltage) msgs.push('⚡ Tegangan Lebih');
+                                if (acData.overcurrent) msgs.push('🔌 Arus Lebih');
+                                faultNotification.style.display = 'block';
+                                faultNotification.innerHTML = '<strong>⚡ AUTO TRIP DIAKTIFKAN! (Dipulihkan)</strong><br>' + (msgs.length ? msgs.join(', ') : 'Gangguan Tersimpan');
+                            }
+                            
+                            return true;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Gagal memulihkan state fault:', e);
+            }
+            return false;
+        }
+        
+        function toggleHaptic() {
+            hapticEnabled = !hapticEnabled;
+            localStorage.setItem('hapticEnabled', hapticEnabled);
+            initHaptic();
+            
+            // Stop haptic jika sedang aktif
+            if (!hapticEnabled) {
+                stopHapticInterval();
+            } else if (isFaultActive) {
+                // Restart haptic jika fault sedang aktif
+                startHapticInterval(currentFaultType);
+            }
+            
+            // Beri feedback langsung
+            if (hapticEnabled && navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+            
+            showToast(hapticEnabled ? '📳 Haptic: AKTIF' : '🔇 Haptic: NONAKTIF', hapticEnabled ? 'info' : 'error');
+        }
+        
+        function getHapticPattern(faultType) {
+            switch(faultType) {
+                case 'overvoltage':
+                    return [300, 200, 300, 200, 300]; // Pola lambat kuat
+                case 'overcurrent':
+                    return [150, 100, 150, 100, 150]; // Pola sedang
+                case 'multiple_fault':
+                    return [200, 80, 200, 80, 200, 80, 400]; // Pola cepat intens
+                default:
+                    return [250, 150, 250]; // Pola default
+            }
+        }
+        
+        function startHapticInterval(faultType) {
+            if (!hapticEnabled || !navigator.vibrate) return;
+            
+            // Stop interval yang ada dulu
+            stopHapticInterval();
+            
+            isFaultActive = true;
+            currentFaultType = faultType;
+            const pattern = getHapticPattern(faultType);
+            
+            // Update tampilan tombol
+            const toggle = document.getElementById('hapticToggle');
+            if (toggle && hapticEnabled) {
+                toggle.classList.add('fault-active-haptic');
+            }
+            
+            // Jalankan getar pertama
+            navigator.vibrate(pattern);
+            
+            // Set interval untuk getar berkelanjutan setiap 2 detik
+            hapticInterval = setInterval(() => {
+                if (hapticEnabled && isFaultActive && navigator.vibrate) {
+                    navigator.vibrate(pattern);
+                } else if (!isFaultActive) {
+                    stopHapticInterval();
+                }
+            }, 2000);
+            
+            console.log(`📳 Haptic continuous started: ${faultType} - Pattern: [${pattern}]`);
+        }
+        
+        function stopHapticInterval() {
+            if (hapticInterval) {
+                clearInterval(hapticInterval);
+                hapticInterval = null;
+            }
+            
+            isFaultActive = false;
+            currentFaultType = null;
+            
+            // Stop getar
+            if (navigator.vibrate) {
+                navigator.vibrate(0);
+            }
+            
+            // Update tampilan tombol
+            const toggle = document.getElementById('hapticToggle');
+            if (toggle) {
+                toggle.classList.remove('fault-active-haptic');
+            }
+            
+            console.log('📳 Haptic continuous stopped');
+        }
+        
+        function triggerFaultHaptic(acData) {
+            if (!hapticEnabled) return;
+            
+            const faultActive = acData.fault_active || false;
+            const overvoltage = acData.overvoltage || false;
+            const overcurrent = acData.overcurrent || false;
+            
+            if (faultActive) {
+                // Tentukan jenis fault
+                let faultType = 'fault_start';
+                if (overvoltage && overcurrent) faultType = 'multiple_fault';
+                else if (overvoltage) faultType = 'overvoltage';
+                else if (overcurrent) faultType = 'overcurrent';
+                
+                // Mulai haptic interval jika belum
+                if (!isFaultActive) {
+                    console.log('📳 Fault terdeteksi, memulai haptic:', faultType);
+                    startHapticInterval(faultType);
+                    triggerFaultShake(); // Shake hanya sekali saat fault start
+                } else if (currentFaultType !== faultType) {
+                    // Update pattern jika jenis fault berubah
+                    console.log('📳 Jenis fault berubah, update haptic:', currentFaultType, '->', faultType);
+                    startHapticInterval(faultType);
+                }
+                // Jika fault masih sama dan haptic masih berjalan, tidak perlu restart
+            } else {
+                // Fault tidak aktif - stop haptic
+                if (isFaultActive) {
+                    console.log('📳 Fault cleared, stopping haptic');
+                    // Getar lembut sebagai tanda fault selesai
+                    if (navigator.vibrate) {
+                        navigator.vibrate([50, 150, 50]);
+                        setTimeout(() => navigator.vibrate(0), 300);
+                    }
+                    stopHapticInterval();
+                }
+            }
+        }
+        
+        function triggerFaultShake() {
+            const card = document.getElementById('mainMonitorCard');
+            if (!card) return;
+            
+            card.classList.remove('fault-shake');
+            void card.offsetWidth;
+            card.classList.add('fault-shake');
+            
+            setTimeout(() => {
+                card.classList.remove('fault-shake');
+            }, 600);
+        }
+
+        // ============ KONFIGURASI MQTT ============
+        const broker = "broker.hivemq.com";
+        const wssPort = 8884;
+        const topic = "power/monitor/data";
+        const commandTopic = "power/monitor/command";
+        
+        const persistentClientId = (() => {
+            const saved = localStorage.getItem('mqttClientId');
+            if (saved) return saved;
+            const newId = "web_dashboard_" + Math.random().toString(16).substr(2, 8) + "_" + Date.now();
+            localStorage.setItem('mqttClientId', newId);
+            return newId;
+        })();
+
+        console.log("🔑 Client ID:", persistentClientId);
+
+        // ============ VARIABEL STATUS ============
+        let currentLimits = { ac_voltage: 250, ac_current: 90 };
+        let currentFaults = { ac_fault: false };
+        let currentRelayState = false;
+        let currentRelayAuto = true;
+        let lastDataTimestamp = 0;
+        let deviceOnline = false;
+        let currentRSSI = null;
+        let currentFreeHeap = null;
+        let limitsInitialized = false;
+        let simulationActive = false;
+        let dataReceivedFromESP = false;
+        
+        let previousFaultState = false;
+        let previousOvervoltage = false;
+        let previousOvercurrent = false;
+        
+        let globalSequenceNumber = 1;
+
+        let reconnectAttempts = 0;
+        const maxReconnectDelay = 30000;
+        let lastHeartbeat = Date.now();
+        const HEARTBEAT_TIMEOUT = 120000;
+        let mqttReconnectTimer = null;
+
+        const DATA_INTERVAL = 2000;
+        const OFFLINE_THRESHOLD = DATA_INTERVAL * 4;
+        const maxDataPoints = 10;
+        const maxLoggerEntries = 20;
+
+        const dataStore = {
+            timestamps: [], acVoltage: [], acCurrent: [], acPower: [], acFrequency: [], acEnergy: []
+        };
+
+        let loggerData = [];
+        let faultEventCount = 0;
+        let faultClearedCount = 0;
+
+        let chart;
+        let currentChartType = 'voltage';
+        let mqttClient = null;
+        
+        let deferredPrompt = null;
+        let pwaInstalled = false;
+
+        // ============ FUNGSI KONVERSI SATUAN ============
+        function formatPowerValue(value, type = 'W') {
+            if (type === 'W') {
+                if (Math.abs(value) >= 1000) return { displayValue: (value / 1000).toFixed(2), unit: 'kW', originalUnit: type };
+                return { displayValue: value.toFixed(1), unit: type, originalUnit: type };
+            }
+            return { displayValue: value.toFixed(1), unit: type, originalUnit: type };
+        }
+
+        function formatMemory(bytes) {
+            if (bytes === null || bytes === undefined || isNaN(bytes)) return '-';
+            if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+            if (bytes >= 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return bytes + ' B';
+        }
+
+        function getMemoryClass(freeBytes, totalBytes) {
+            if (freeBytes === null || totalBytes === null || totalBytes === 0) return 'memory-offline';
+            const percentage = (freeBytes / totalBytes) * 100;
+            if (percentage >= 50) return 'memory-good';
+            if (percentage >= 25) return 'memory-moderate';
+            return 'memory-low';
+        }
+
+        // ============ SISTEM RUMUS OHM UNTUK RENTANG GAUGE ============
+        function calculateGaugeRanges() {
+            const vLimit = Math.min(currentLimits.ac_voltage || 250, 265);
+            const iLimit = currentLimits.ac_current || 90;
+            const pfNominal = 0.85;
+            return {
+                voltage: { max: 265, warningThreshold: ((vLimit * 1.0) / 265) * 100, dangerThreshold: ((vLimit * 1.05) / 265) * 100 },
+                current: { max: Math.ceil(iLimit * 1.5 / 5) * 5, warningThreshold: (iLimit / (iLimit * 1.5)) * 100, dangerThreshold: (iLimit * 1.1 / (iLimit * 1.5)) * 100 },
+                power: { max: Math.ceil((vLimit * iLimit * pfNominal) / 100) * 100, warningThreshold: 75, dangerThreshold: 90 },
+                frequency: { max: 65, min: 45 }
+            };
+        }
+
+        function showGauges() {
+            const gaugeIds = ['gaugeVoltage', 'gaugeCurrent', 'gaugePower', 'gaugeFrequency', 'gaugePF', 'gaugeEnergy'];
+            const containerIds = ['gaugeVoltageContainer', 'gaugeCurrentContainer', 'gaugePowerContainer', 'gaugeFrequencyContainer', 'gaugePFContainer', 'gaugeEnergyContainer'];
+            gaugeIds.forEach((gaugeId, index) => {
+                const gauge = document.getElementById(gaugeId);
+                const container = document.getElementById(containerIds[index]);
+                if (gauge && container) {
+                    gauge.style.display = 'block';
+                    const placeholder = container.querySelector('.gauge-placeholder');
+                    if (placeholder) placeholder.style.display = 'none';
+                }
+            });
+            document.querySelectorAll('.param-item.waiting-state').forEach(item => item.classList.remove('waiting-state'));
+            const waitingMsg = document.getElementById('waitingForData');
+            if (waitingMsg) waitingMsg.style.display = 'none';
+        }
+
+        // ============ CIRCULAR GAUGE SYSTEM ============
+        class CircularGauge {
+            constructor(canvasId, config) {
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) return;
+                this.ctx = this.canvas.getContext('2d');
+                this.config = { maxValue: 100, minValue: 0, warningThreshold: 80, dangerThreshold: 90, colorNormal: '#6366f1', colorWarning: '#f59e0b', colorDanger: '#ef4444', label: '', unit: '', unitType: '', decimals: 1, showValueInGauge: false, ...config };
+                this.currentValue = 0;
+                this.targetValue = 0;
+                this.animationFrame = null;
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+            }
+
+            updateConfig(config) { this.config = { ...this.config, ...config }; this.resize(); }
+
+            resize() {
+                if (!this.canvas) return;
+                const container = this.canvas.parentElement;
+                const maxWidth = container ? Math.min(container.clientWidth, 200) : 180;
+                const size = Math.min(maxWidth, 140);
+                this.canvas.width = size * 2;
+                this.canvas.height = size * 2;
+                this.canvas.style.width = size + 'px';
+                this.canvas.style.height = size + 'px';
+                this.draw(this.currentValue);
+            }
+
+            setValue(value) {
+                this.targetValue = Math.max(this.config.minValue, Math.min(this.config.maxValue, value));
+                if (!this.animationFrame) this.animate();
+            }
+
+            animate() {
+                const diff = this.targetValue - this.currentValue;
+                const step = diff * 0.25;
+                if (Math.abs(diff) < 0.005) { this.currentValue = this.targetValue; this.draw(this.currentValue); this.animationFrame = null; return; }
+                this.currentValue += step;
+                this.draw(this.currentValue);
+                this.animationFrame = requestAnimationFrame(() => this.animate());
+            }
+
+            getColor(value) {
+                const maxSafe = this.config.maxValue * (this.config.warningThreshold / 100);
+                const warningZone = this.config.maxValue * (this.config.dangerThreshold / 100);
+                if (value >= warningZone) return this.config.colorDanger;
+                if (value >= maxSafe) return this.config.colorWarning;
+                const style = getComputedStyle(document.documentElement);
+                return style.getPropertyValue('--gauge-normal').trim() || this.config.colorNormal;
+            }
+
+            getDisplayUnit() { return (this.config.unitType === 'W' && this.config.maxValue >= 1000) ? 'kW' : this.config.unit; }
+            getDisplayValue(value) { return (this.config.unitType === 'W' && this.config.maxValue >= 1000) ? value / 1000 : value; }
+
+            draw(value) {
+                if (!this.ctx || !this.canvas) return;
+                const ctx = this.ctx;
+                const w = this.canvas.width, h = this.canvas.height;
+                const centerX = w / 2, centerY = h / 2;
+                const radius = Math.min(w, h) * 0.38;
+                const lineWidth = radius * 0.22;
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                
+                ctx.clearRect(0, 0, w, h);
+                
+                const bgColor = isDark ? '#334155' : '#e5e7eb';
+                const bgGradient = ctx.createLinearGradient(0, centerY - radius, 0, centerY + radius);
+                bgGradient.addColorStop(0, bgColor);
+                bgGradient.addColorStop(1, isDark ? '#1e293b' : '#d1d5db');
+                
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, Math.PI * 0.75, Math.PI * 2.25);
+                ctx.strokeStyle = bgGradient;
+                ctx.lineWidth = lineWidth;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+                
+                const percentage = Math.max(0, Math.min(1, (value - this.config.minValue) / (this.config.maxValue - this.config.minValue)));
+                const startAngle = Math.PI * 0.75;
+                const endAngle = startAngle + (Math.PI * 1.5 * percentage);
+                const color = this.getColor(value);
+                
+                const gradient = ctx.createLinearGradient(0, centerY - radius, 0, centerY + radius);
+                gradient.addColorStop(0, this.adjustColor(color, 20));
+                gradient.addColorStop(0.5, color);
+                gradient.addColorStop(1, this.adjustColor(color, -30));
+                
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = lineWidth;
+                ctx.lineCap = 'round';
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 10;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius - lineWidth * 0.35, 0, Math.PI * 2);
+                ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.08)';
+                ctx.fill();
+                
+                ctx.fillStyle = isDark ? '#94a3b8' : '#9ca3af';
+                ctx.font = `${radius * 0.3}px 'Segoe UI', sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.config.unit, centerX, centerY);
+                
+                this.drawZoneIndicator(ctx, centerX, centerY, radius, lineWidth, 'warning');
+                this.drawZoneIndicator(ctx, centerX, centerY, radius, lineWidth, 'danger');
+            }
+
+            drawZoneIndicator(ctx, centerX, centerY, radius, lineWidth, zone) {
+                const threshold = zone === 'warning' ? this.config.warningThreshold : this.config.dangerThreshold;
+                const percentage = threshold / 100;
+                const startAngle = Math.PI * 0.75 + (Math.PI * 1.5 * percentage);
+                ctx.beginPath();
+                ctx.arc(centerX + Math.cos(startAngle) * radius, centerY + Math.sin(startAngle) * radius, lineWidth * 0.18, 0, Math.PI * 2);
+                ctx.fillStyle = zone === 'warning' ? this.config.colorWarning : this.config.colorDanger;
+                ctx.shadowColor = ctx.fillStyle;
+                ctx.shadowBlur = 5;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            adjustColor(color, amount) {
+                const hex = color.replace('#', '');
+                const r = Math.max(0, Math.min(255, parseInt(hex.substr(0, 2), 16) + amount));
+                const g = Math.max(0, Math.min(255, parseInt(hex.substr(2, 2), 16) + amount));
+                const b = Math.max(0, Math.min(255, parseInt(hex.substr(4, 2), 16) + amount));
+                return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+            }
+        }
+
+        let gauges = {};
+        
+        function initGauges() {
+            const ranges = calculateGaugeRanges();
+            const style = getComputedStyle(document.documentElement);
+            const gaugeNormal = style.getPropertyValue('--gauge-normal').trim() || '#6366f1';
+            
+            gauges = {
+                voltage: new CircularGauge('gaugeVoltage', { maxValue: 265, minValue: 0, warningThreshold: ranges.voltage.warningThreshold, dangerThreshold: ranges.voltage.dangerThreshold, colorNormal: gaugeNormal, colorWarning: '#f59e0b', colorDanger: '#ef4444', unit: 'V', unitType: 'V', decimals: 1 }),
+                current: new CircularGauge('gaugeCurrent', { maxValue: ranges.current.max, minValue: 0, warningThreshold: ranges.current.warningThreshold, dangerThreshold: ranges.current.dangerThreshold, colorNormal: '#3b82f6', colorWarning: '#f59e0b', colorDanger: '#ef4444', unit: 'A', unitType: 'A', decimals: 3 }),
+                power: new CircularGauge('gaugePower', { maxValue: ranges.power.max, minValue: 0, warningThreshold: 75, dangerThreshold: 90, colorNormal: '#10b981', colorWarning: '#f59e0b', colorDanger: '#ef4444', unit: 'W', unitType: 'W', decimals: 2 }),
+                frequency: new CircularGauge('gaugeFrequency', { maxValue: 65, minValue: 45, warningThreshold: 85, dangerThreshold: 92, colorNormal: '#8b5cf6', colorWarning: '#f59e0b', colorDanger: '#ef4444', unit: 'Hz', unitType: 'Hz', decimals: 1 }),
+                pf: new CircularGauge('gaugePF', { maxValue: 1, minValue: 0, warningThreshold: 60, dangerThreshold: 40, colorNormal: '#06b6d4', colorWarning: '#f59e0b', colorDanger: '#ef4444', unit: '', unitType: '', decimals: 2 }),
+                energy: new CircularGauge('gaugeEnergy', { maxValue: 100, minValue: 0, warningThreshold: 80, dangerThreshold: 90, colorNormal: '#f59e0b', colorWarning: '#f59e0b', colorDanger: '#ef4444', unit: 'kWh', unitType: 'kWh', decimals: 3 })
+            };
+        }
+
+        function updateGaugeRanges() {
+            const ranges = calculateGaugeRanges();
+            const style = getComputedStyle(document.documentElement);
+            const gaugeNormal = style.getPropertyValue('--gauge-normal').trim() || '#6366f1';
+            if (gauges.voltage) gauges.voltage.updateConfig({ warningThreshold: ranges.voltage.warningThreshold, dangerThreshold: ranges.voltage.dangerThreshold, colorNormal: gaugeNormal });
+            if (gauges.current) gauges.current.updateConfig({ maxValue: ranges.current.max, warningThreshold: ranges.current.warningThreshold, dangerThreshold: ranges.current.dangerThreshold });
+            if (gauges.power) gauges.power.updateConfig({ maxValue: ranges.power.max, unit: formatPowerValue(ranges.power.max, 'W').unit });
+        }
+
+        function updateGauges(acData) {
+            if (!gauges.voltage) return;
+            gauges.voltage.setValue(acData.voltage);
+            gauges.current.setValue(acData.current);
+            gauges.power.setValue(acData.real_power);
+            gauges.frequency.setValue(acData.frequency || 50.0);
+            gauges.pf.setValue(acData.pf);
+            if (acData.energy > gauges.energy.config.maxValue * 0.9) {
+                const newMax = Math.ceil(acData.energy * 1.2 / 10) * 10;
+                gauges.energy.updateConfig({ maxValue: Math.max(newMax, 10) });
+            }
+            gauges.energy.setValue(acData.energy);
+            updateDisplayUnits(acData);
+        }
+
+        function updateDisplayUnits(acData) {
+            const realPowerFormatted = formatPowerValue(acData.real_power, 'W');
+            const realPowerUnit = document.querySelector('#acRealPower').nextElementSibling;
+            if (realPowerUnit) realPowerUnit.textContent = realPowerFormatted.unit;
+            const realPowerEl = document.getElementById('acRealPower');
+            if (realPowerEl) realPowerEl.textContent = realPowerFormatted.displayValue;
+        }
+
+        // ============ FUNGSI RSSI & MEMORI ============
+        function updateRSSI(rssi) {
+            currentRSSI = rssi;
+            const rssiBadge = document.getElementById('rssiBadge');
+            const rssiInfo = document.getElementById('rssiInfo');
+            if (!deviceOnline || rssi === null || rssi === undefined) {
+                if (rssiBadge) { rssiBadge.textContent = '📶 - dBm'; rssiBadge.className = 'rssi-badge rssi-offline'; }
+                if (rssiInfo) { rssiInfo.textContent = '- dBm'; rssiInfo.style.color = 'var(--text-muted)'; }
+                return;
+            }
+            let rssiText = rssi + ' dBm';
+            let rssiClass = 'rssi-badge ';
+            if (rssi >= -50) rssiClass += 'rssi-excellent';
+            else if (rssi >= -65) rssiClass += 'rssi-good';
+            else if (rssi >= -75) rssiClass += 'rssi-fair';
+            else rssiClass += 'rssi-poor';
+            if (rssiBadge) { rssiBadge.textContent = '📶 ' + rssiText; rssiBadge.className = rssiClass; }
+            if (rssiInfo) {
+                rssiInfo.textContent = rssiText;
+                if (rssi >= -50) rssiInfo.style.color = '#10b981';
+                else if (rssi >= -65) rssiInfo.style.color = '#3b82f6';
+                else if (rssi >= -75) rssiInfo.style.color = '#f59e0b';
+                else rssiInfo.style.color = '#ef4444';
+            }
+        }
+
+        function updateMemoryDisplay(freeHeap) {
+            currentFreeHeap = freeHeap;
+            const memoryBadge = document.getElementById('memoryBadge');
+            const typicalTotalHeap = 300 * 1024;
+            
+            if (!deviceOnline || freeHeap === null || freeHeap === undefined || isNaN(freeHeap)) {
+                if (memoryBadge) { memoryBadge.textContent = '💾 -'; memoryBadge.className = 'memory-badge memory-offline'; }
+                ['heapTotal','freeHeap','heapUsed'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '-'; });
+                ['heapBar','freeHeapBar','heapUsagePercentBar'].forEach(id => { const el = document.getElementById(id); if (el) el.style.width = '0%'; });
+                ['heapBarText','freeHeapBarText','heapUsagePercentBarText'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '-'; });
+                return;
+            }
+            
+            const usedHeap = typicalTotalHeap - freeHeap;
+            const usagePercent = Math.round((usedHeap / typicalTotalHeap) * 100);
+            const freePercent = Math.round((freeHeap / typicalTotalHeap) * 100);
+            
+            if (memoryBadge) {
+                const memClass = getMemoryClass(freeHeap, typicalTotalHeap);
+                memoryBadge.textContent = `💾 ${formatMemory(freeHeap)}`;
+                memoryBadge.className = `memory-badge ${memClass}`;
+            }
+            
+            const heapTotal = document.getElementById('heapTotal');
+            const freeHeapEl = document.getElementById('freeHeap');
+            const heapUsed = document.getElementById('heapUsed');
+            if (heapTotal) heapTotal.textContent = formatMemory(typicalTotalHeap);
+            if (freeHeapEl) freeHeapEl.textContent = formatMemory(freeHeap);
+            if (heapUsed) heapUsed.textContent = formatMemory(usedHeap) + ` (${usagePercent}%)`;
+            
+            const heapBar = document.getElementById('heapBar');
+            const freeHeapBar = document.getElementById('freeHeapBar');
+            const heapUsagePercentBar = document.getElementById('heapUsagePercentBar');
+            if (heapBar) { heapBar.style.width = '100%'; heapBar.style.background = '#667eea'; }
+            if (freeHeapBar) { freeHeapBar.style.width = freePercent + '%'; freeHeapBar.style.background = freePercent >= 50 ? '#10b981' : freePercent >= 25 ? '#f59e0b' : '#ef4444'; }
+            if (heapUsagePercentBar) { heapUsagePercentBar.style.width = usagePercent + '%'; heapUsagePercentBar.style.background = usagePercent >= 75 ? '#ef4444' : usagePercent >= 50 ? '#f59e0b' : '#667eea'; }
+            
+            const heapBarText = document.getElementById('heapBarText');
+            const freeHeapBarText = document.getElementById('freeHeapBarText');
+            const heapUsagePercentBarText = document.getElementById('heapUsagePercentBarText');
+            if (heapBarText) heapBarText.textContent = `Total: ${formatMemory(typicalTotalHeap)}`;
+            if (freeHeapBarText) freeHeapBarText.textContent = `Bebas: ${formatMemory(freeHeap)} (${freePercent}%)`;
+            if (heapUsagePercentBarText) heapUsagePercentBarText.textContent = `Terpakai: ${formatMemory(usedHeap)} (${usagePercent}%)`;
+        }
+
+        // ============ DATA LOGGER FUNCTIONS ============
+        function getFaultDetail(acData) {
+            let faults = [];
+            if (acData.overvoltage) faults.push(`⚡ Tegangan Lebih (${acData.voltage.toFixed(1)}V > batas ${currentLimits.ac_voltage}V)`);
+            if (acData.overcurrent) faults.push(`🔌 Arus Lebih (${acData.current.toFixed(3)}A > batas ${currentLimits.ac_current}A)`);
+            if (faults.length === 0 && acData.fault_active) faults.push('⚠️ Gangguan Tersimpan');
+            return faults;
+        }
+
+        function getFaultTypeClass(acData) {
+            if (acData.overvoltage && acData.overcurrent) return 'multiple';
+            if (acData.overvoltage) return 'overvoltage';
+            if (acData.overcurrent) return 'overcurrent';
+            if (acData.fault_active) return 'active';
+            return 'normal';
+        }
+
+        function getFaultTagText(acData) {
+            if (acData.overvoltage && acData.overcurrent) return '⚡ Tegangan & Arus Lebih';
+            if (acData.overvoltage) return '⚡ Tegangan Lebih';
+            if (acData.overcurrent) return '🔌 Arus Lebih';
+            if (acData.fault_active) return '⚠️ Tersimpan';
+            return 'Normal';
+        }
+
+        function initLogger() {
+            try {
+                const saved = localStorage.getItem('loggerData');
+                if (saved) { loggerData = JSON.parse(saved); if (loggerData.length > maxLoggerEntries) loggerData = loggerData.slice(-maxLoggerEntries); renumberLoggerEntries(); globalSequenceNumber = loggerData.length + 1; }
+                const savedStats = localStorage.getItem('loggerStats');
+                if (savedStats) { const stats = JSON.parse(savedStats); faultEventCount = stats.faultEventCount || 0; faultClearedCount = stats.faultClearedCount || 0; }
+            } catch (e) { console.warn('Gagal memuat data logger:', e); loggerData = []; globalSequenceNumber = 1; }
+            updateLoggerTable();
+        }
+
+        function renumberLoggerEntries() { for (let i = 0; i < loggerData.length; i++) loggerData[i].id = i + 1; }
+
+        function addLoggerEntry(acData, eventType = 'normal') {
+            const timestamp = new Date().toLocaleString('id-ID', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+            const entry = {
+                id: globalSequenceNumber++, timestamp, voltage: acData.voltage, current: acData.current,
+                real_power: acData.real_power, frequency: acData.frequency || 50.0, energy: acData.energy,
+                pf: acData.pf, relay_state: acData.relay_state, relay_auto: acData.relay_auto,
+                fault_active: acData.fault_active || false, overvoltage: acData.overvoltage || false,
+                overcurrent: acData.overcurrent || false, fault_detail: getFaultDetail(acData),
+                fault_type: getFaultTypeClass(acData), event_type: eventType
+            };
+            loggerData.push(entry);
+            if (loggerData.length > maxLoggerEntries) { loggerData = loggerData.slice(-maxLoggerEntries); renumberLoggerEntries(); globalSequenceNumber = maxLoggerEntries + 1; }
+            if (eventType === 'fault_start') faultEventCount++;
+            else if (eventType === 'fault_end') faultClearedCount++;
+            saveLoggerData(); updateLoggerTable(); updateFaultSummary();
+        }
+
+        function checkFaultTransition(acData) {
+            const currentFaultState = acData.fault_active || false;
+            const currentOvervoltage = acData.overvoltage || false;
+            const currentOvercurrent = acData.overcurrent || false;
+            const wasFaultActive = previousFaultState;
+            let eventType = 'normal';
+            
+            if (currentFaultState && !wasFaultActive) {
+                eventType = 'fault_start';
+            }
+            else if (!currentFaultState && wasFaultActive) {
+                eventType = 'fault_end';
+            }
+            else if (currentFaultState && wasFaultActive && 
+                     (currentOvervoltage !== previousOvervoltage || currentOvercurrent !== previousOvercurrent)) {
+                eventType = 'fault_changed';
+            }
+            
+            previousFaultState = currentFaultState;
+            previousOvervoltage = currentOvervoltage;
+            previousOvercurrent = currentOvercurrent;
+            return eventType;
+        }
+
+        function saveLoggerData() {
+            try { localStorage.setItem('loggerData', JSON.stringify(loggerData)); localStorage.setItem('loggerStats', JSON.stringify({ faultEventCount, faultClearedCount })); }
+            catch (e) { console.error('❌ Gagal menyimpan:', e); loggerData = loggerData.slice(-5); renumberLoggerEntries(); }
+        }
+
+        function updateFaultSummary() {
+            const faultSummary = document.getElementById('faultSummary');
+            const faultSummaryText = document.getElementById('faultSummaryText');
+            if (!faultSummary || !faultSummaryText) return;
+            const recentFaults = loggerData.filter(e => e.event_type === 'fault_start' || e.event_type === 'fault_end').slice(-5).reverse();
+            if (recentFaults.length === 0) { faultSummary.style.display = 'none'; return; }
+            faultSummary.style.display = 'block';
+            let html = '<br>';
+            recentFaults.forEach(f => { html += `<span style="font-size:0.85em;">${f.event_type==='fault_start'?'🔴':'🟢'} <strong>${f.timestamp}</strong>: ${f.event_type==='fault_start'?'GANGGUAN MULAI':'GANGGUAN SELESAI'} - ${f.fault_detail[0]||'Tidak Diketahui'}</span><br>`; });
+            faultSummaryText.innerHTML = html;
+        }
+
+        function updateLoggerTable() {
+            const tbody = document.getElementById('loggerTableBody');
+            if (!tbody) return;
+            if (loggerData.length === 0) { tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:20px;">📋 Belum ada data tercatat</td></tr>`; }
+            else {
+                tbody.innerHTML = loggerData.slice().reverse().map(entry => {
+                    let rowClass = '', faultStatusHTML = '', eventHTML = '';
+                    if (entry.event_type === 'fault_start') { rowClass = 'fault-row'; faultStatusHTML = `<span class="fault-tag ${entry.fault_type}">${getFaultTagText(entry)}</span>`; eventHTML = '<span class="event-indicator fault-start"></span> Gangguan Mulai'; }
+                    else if (entry.event_type === 'fault_end') { rowClass = 'fault-cleared-row'; faultStatusHTML = '<span class="fault-tag cleared">✅ SELESAI</span>'; eventHTML = '<span class="event-indicator fault-end"></span> Gangguan Selesai'; }
+                    else if (entry.fault_active) { rowClass = 'fault-row'; faultStatusHTML = `<span class="fault-tag ${entry.fault_type}">${getFaultTagText(entry)}</span>`; eventHTML = 'Gangguan Aktif'; }
+                    else { faultStatusHTML = '<span class="fault-tag normal">Normal</span>'; eventHTML = 'Operasi Normal'; }
+                    const pf = formatPowerValue(entry.real_power, 'W');
+                    return `<tr class="${rowClass}"><td>${entry.id}</td><td>${entry.timestamp}</td><td>${entry.voltage.toFixed(1)}</td><td>${entry.current.toFixed(3)}</td><td>${pf.displayValue} ${pf.unit}</td><td>${(entry.frequency||50).toFixed(1)}</td><td>${entry.energy.toFixed(3)}</td><td>${entry.pf.toFixed(2)}</td><td>${entry.relay_state?'🟢 NYALA':'🔴 MATI'}</td><td>${faultStatusHTML}</td><td>${(entry.fault_detail||[]).map(d=>`<div class="fault-detail">${d}</div>`).join('')}</td><td>${eventHTML}</td></tr>`;
+                }).join('');
+            }
+            updateLoggerStats();
+        }
+
+        function updateLoggerStats() {
+            const totalRecordsEl = document.getElementById('totalRecords');
+            const faultEventsEl = document.getElementById('faultEvents');
+            const faultClearedEl = document.getElementById('faultCleared');
+            if (totalRecordsEl) totalRecordsEl.textContent = loggerData.length;
+            if (faultEventsEl) faultEventsEl.textContent = faultEventCount;
+            if (faultClearedEl) faultClearedEl.textContent = faultClearedCount;
+        }
+
+        function exportLoggerData() {
+            if (loggerData.length === 0) { alert('Tidak ada data!'); return; }
+            let csv = 'No,Waktu,Tegangan (V),Arus (A),Daya,Frekuensi (Hz),Energi (kWh),FP,Relay,OV,OC,Fault,Event,Detail\n';
+            loggerData.forEach(e => { csv += `${e.id},"${e.timestamp}",${e.voltage.toFixed(1)},${e.current.toFixed(3)},${formatPowerValue(e.real_power,'W').displayValue} ${formatPowerValue(e.real_power,'W').unit},${(e.frequency||50).toFixed(1)},${e.energy.toFixed(3)},${e.pf.toFixed(2)},${e.relay_state?'NYALA':'MATI'},${e.overvoltage?'YA':'TIDAK'},${e.overcurrent?'YA':'TIDAK'},${e.fault_active?'YA':'TIDAK'},"${e.event_type}","${(e.fault_detail||[]).join('; ')}"\n`; });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `log_${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            showToast('📥 Data berhasil diekspor', 'info');
+        }
+
+        function clearLoggerData() {
+            if (confirm('Hapus semua data?')) { loggerData = []; faultEventCount = 0; faultClearedCount = 0; previousFaultState = false; previousOvervoltage = false; previousOvercurrent = false; globalSequenceNumber = 1; try { localStorage.removeItem('loggerData'); localStorage.removeItem('loggerStats'); } catch(e) {} updateLoggerTable(); showToast('📋 Data dihapus', 'info'); }
+        }
+
+        // ============ STATUS PERANGKAT ============
+        function checkDeviceStatus() {
+            if (Date.now() - lastDataTimestamp > OFFLINE_THRESHOLD || lastDataTimestamp === 0) setDeviceOffline();
+            else setDeviceOnline();
+        }
+
+        function setDeviceOnline() { if (!deviceOnline) { deviceOnline = true; updateDeviceBadge(true); } }
+        function setDeviceOffline() { 
+            if (deviceOnline || lastDataTimestamp === 0) { 
+                deviceOnline = false; 
+                updateDeviceBadge(false); 
+                updateRSSI(null); 
+                updateMemoryDisplay(null);
+                // Jangan stop haptic saat device offline, biarkan tetap berjalan
+            } 
+        }
+
+        function updateDeviceBadge(online) {
+            const badge = document.getElementById('deviceStatusBadge');
+            const info = document.getElementById('deviceConnectionInfo');
+            if (badge) { badge.textContent = online ? '📡 Online' : '📡 Offline'; badge.className = online ? 'status-badge device-online' : 'status-badge device-offline'; }
+            if (info) { info.textContent = online ? '🟢 Online' : '🔴 Offline'; info.style.color = online ? '#10b981' : '#ef4444'; }
+        }
+
+        function updateSimulationIndicator(active) {
+            simulationActive = active;
+            const simBadge = document.getElementById('simulationBadge');
+            const simStatus = document.getElementById('simulationStatus');
+            if (simBadge) simBadge.style.display = active ? 'inline-flex' : 'none';
+            if (simStatus) { simStatus.textContent = active ? '🧪 AKTIF' : '✅ Nonaktif'; simStatus.style.color = active ? '#f59e0b' : '#10b981'; }
+        }
+
+        function updateMQTTConnectionStatus(connected) {
+            const mqttInfo = document.getElementById('mqttConnectionInfo');
+            if (mqttInfo) { mqttInfo.textContent = connected ? '🟢 Terhubung' : '🔴 Terputus'; mqttInfo.style.color = connected ? '#10b981' : '#ef4444'; }
+        }
+
+        function updateReconnectAttempts() {
+            const el = document.getElementById('reconnectAttemptInfo');
+            if (el) el.textContent = reconnectAttempts;
+        }
+
+        setInterval(checkDeviceStatus, 1000);
+
+        // ============ TAB SWITCH ============
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            const tabMap = { 'monitor': 0, 'logger': 1, 'simulation': 2, 'settings': 3, 'about': 4 };
+            const tabId = tab + 'Tab';
+            if (document.getElementById(tabId)) document.getElementById(tabId).classList.add('active');
+            const btns = document.querySelectorAll('.tab-btn');
+            if (btns[tabMap[tab]||0]) btns[tabMap[tab]||0].classList.add('active');
+            if (tab === 'logger') { updateLoggerTable(); updateFaultSummary(); }
+            if (tab === 'settings') { updateMemoryDisplay(currentFreeHeap); updateRSSI(currentRSSI); updateReconnectAttempts(); updateActiveThemeInfo(); updateActivePaletteInfo(); initHaptic(); }
+        }
+
+        // ============ MQTT COMMANDS ============
+        function sendCommand(cmd) {
+            if (mqttClient && mqttClient.isConnected()) {
+                const message = new Paho.MQTT.Message(cmd);
+                message.destinationName = commandTopic;
+                mqttClient.send(message);
+                console.log("📤 Perintah terkirim:", cmd);
+            } else {
+                console.log("❌ MQTT tidak terhubung");
+                showToast("❌ MQTT tidak terhubung. Silakan reconnect.", "error");
+            }
+        }
+
+        function toggleManualRelay() {
+            if (!dataReceivedFromESP) { shakeButton('manualRelayBtn'); alert("⏳ Data dari ESP32 belum diterima!"); return; }
+            if (currentFaults.ac_fault) { shakeButton('manualRelayBtn'); alert("⚠️ AUTO TRIP AKTIF!"); return; }
+            sendCommand('relay_ac_toggle');
+            const btn = document.getElementById('manualRelayBtn');
+            if (btn) { btn.style.animation = 'btnPressEffect 0.3s ease'; setTimeout(() => btn.style.animation = '', 300); }
+        }
+
+        function shakeButton(id) {
+            const btn = document.getElementById(id);
+            if (btn) { btn.style.animation = 'shake 0.5s ease'; setTimeout(() => btn.style.animation = '', 500); }
+        }
+
+        function updateManualButton(relayState, relayAuto, faultActive) {
+            const btn = document.getElementById('manualRelayBtn');
+            const icon = document.getElementById('manualIcon');
+            if (!btn || !icon) return;
+            if (faultActive) { btn.disabled = true; btn.className = 'action-btn-circle manual-btn manual-fault-state'; icon.textContent = '🚫'; }
+            else { btn.disabled = false; btn.className = relayState ? 'action-btn-circle manual-btn' : 'action-btn-circle manual-btn manual-off-state'; icon.textContent = relayState ? '🟢' : '🔴'; }
+        }
+
+        function setLimit(type) {
+            let value, cmd;
+            if (type === 'ac_v') {
+                value = document.getElementById('acVoltageLimit').value;
+                if (!value || isNaN(value) || parseFloat(value) < 100 || parseFloat(value) > 265) { alert("Batas tegangan valid: 100-265 V"); return; }
+                cmd = "set_ac_v_limit:" + value;
+            } else {
+                value = document.getElementById('acCurrentLimit').value;
+                if (!value || isNaN(value) || parseFloat(value) <= 0 || parseFloat(value) > 100) { alert("Batas arus valid: 0.01-100 A"); return; }
+                cmd = "set_ac_i_limit:" + value;
+            }
+            sendCommand(cmd);
+            if (type === 'ac_v') document.getElementById('acVoltageLimit').value = '';
+            else document.getElementById('acCurrentLimit').value = '';
+            setTimeout(() => sendCommand('get_status'), 500);
+        }
+
+        // ============ MQTT CONNECTION (OPTIMIZED) ============
+        function scheduleReconnect() {
+            if (mqttReconnectTimer) clearTimeout(mqttReconnectTimer);
+            reconnectAttempts++;
+            updateReconnectAttempts();
+            const delay = Math.min(2000 * Math.pow(1.5, reconnectAttempts - 1), maxReconnectDelay);
+            const jitter = Math.random() * 1000;
+            console.log(`🔄 Reconnect ke-${reconnectAttempts} dalam ${Math.round((delay+jitter)/1000)}s`);
+            mqttReconnectTimer = setTimeout(() => {
+                if (!mqttClient || !mqttClient.isConnected()) {
+                    connectMQTT();
+                }
+            }, delay + jitter);
+        }
+
+        function connectMQTT() {
+            if (mqttClient) {
+                try { mqttClient.disconnect(); } catch(e) {}
+                mqttClient = null;
+            }
+            
+            console.log("🔗 Menghubungkan ke", broker + ":" + wssPort);
+            mqttClient = new Paho.MQTT.Client(broker, wssPort, persistentClientId);
+            
+            mqttClient.onConnectionLost = (responseObject) => {
+                console.warn("🔌 Terputus:", responseObject.errorMessage);
+                updateConnectionUI(false);
+                // Jangan stop haptic saat koneksi terputus
+                if (responseObject.errorCode !== 0) {
+                    scheduleReconnect();
+                }
+            };
+            
+            mqttClient.onMessageArrived = (message) => {
+                lastHeartbeat = Date.now();
+                try {
+                    const data = JSON.parse(message.payloadString);
+                    if (message.destinationName === topic) {
+                        if (data.ac) { updateDisplay(data.ac); addDataPoint(data.timestamp || Date.now(), data.ac); saveLastData(data); }
+                        handleFullData(data);
+                    }
+                } catch (e) { console.error("❌ Parse error:", e); }
+            };
+            
+            mqttClient.connect({
+                onSuccess: () => {
+                    console.log("✅ Terhubung!");
+                    reconnectAttempts = 0;
+                    lastHeartbeat = Date.now();
+                    updateReconnectAttempts();
+                    updateConnectionUI(true);
+                    mqttClient.subscribe(topic);
+                    dataReceivedFromESP = false;
+                    document.getElementById('waitingForData').style.display = 'block';
+                    
+                    // TAMBAHKAN: Jika fault state belum dipulihkan, coba lagi setelah connect
+                    if (!isFaultActive) {
+                        setTimeout(() => {
+                            const restored = restoreFaultStateFromCache();
+                            if (restored) {
+                                console.log('📳 State fault dipulihkan setelah MQTT connect');
+                                // Mulai haptic
+                                startHapticInterval(currentFaultType);
+                            }
+                        }, 500);
+                    }
+                    
+                    setTimeout(() => sendCommand('get_status'), 500);
+                },
+                onFailure: (err) => {
+                    console.error("❌ Gagal:", err.errorMessage);
+                    updateConnectionUI(false);
+                    scheduleReconnect();
+                },
+                useSSL: true,
+                timeout: 10,
+                keepAliveInterval: 60,
+                cleanSession: true
+            });
+        }
+
+        function updateConnectionUI(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) { statusEl.textContent = '🟢 Terhubung'; statusEl.className = 'status-badge connected'; }
+            else { statusEl.textContent = reconnectAttempts > 0 ? '🟡 Menghubungkan...' : '🔴 Terputus'; statusEl.className = reconnectAttempts > 0 ? 'status-badge connecting' : 'status-badge disconnected'; }
+            updateMQTTConnectionStatus(connected);
+        }
+
+        function reconnectMQTT() {
+            showToast('🔄 Menghubungkan ulang...', 'info');
+            dataReceivedFromESP = false;
+            document.getElementById('waitingForData').style.display = 'block';
+            reconnectAttempts = 0;
+            updateReconnectAttempts();
+            // Jangan stop haptic saat reconnect
+            if (mqttReconnectTimer) clearTimeout(mqttReconnectTimer);
+            if (mqttClient) { try { mqttClient.disconnect(); } catch(e) {} mqttClient = null; }
+            updateConnectionUI(false);
+            setTimeout(() => connectMQTT(), 500);
+        }
+
+        function checkHeartbeat() {
+            if (mqttClient && mqttClient.isConnected() && Date.now() - lastHeartbeat > HEARTBEAT_TIMEOUT) {
+                console.warn('💔 Heartbeat timeout');
+                reconnectMQTT();
+            }
+        }
+
+        // ============ CHART FUNCTIONS ============
+        function initChart() {
+            const ctx = document.getElementById('dataChart').getContext('2d');
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const style = getComputedStyle(document.documentElement);
+            const brandPrimary = style.getPropertyValue('--brand-primary').trim() || '#6366f1';
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: '⚡ Tegangan AC (V)', data: [], borderColor: brandPrimary, backgroundColor: brandPrimary + '1a', borderWidth: 2, tension: 0.4, fill: true, pointRadius: 3, pointHoverRadius: 5 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 }, padding: 15, color: isDark ? '#f1f5f9' : '#1f2937' } } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 10 }, color: isDark ? '#94a3b8' : '#6b7280' } },
+                        x: { grid: { display: false }, ticks: { font: { size: 10 }, color: isDark ? '#94a3b8' : '#6b7280' } }
+                    }
+                }
+            });
+        }
+
+        function switchChart(type) {
+            currentChartType = type;
+            document.querySelectorAll('#monitorTab .btn').forEach(b => b.classList.remove('active'));
+            if (event && event.target) event.target.classList.add('active');
+            updateChart();
+        }
+
+        function addDataPoint(timestamp, acData) {
+            const timeStr = new Date(timestamp).toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            dataStore.timestamps.push(timeStr);
+            dataStore.acVoltage.push(acData.voltage);
+            dataStore.acCurrent.push(acData.current);
+            dataStore.acPower.push(acData.real_power);
+            dataStore.acFrequency.push(acData.frequency || 50.0);
+            dataStore.acEnergy.push(acData.energy);
+            Object.keys(dataStore).forEach(k => { while (dataStore[k].length > maxDataPoints) dataStore[k].shift(); });
+            updateChart();
+        }
+
+        function updateChart() {
+            if (!chart) return;
+            chart.data.labels = dataStore.timestamps;
+            const map = { voltage: ['⚡ Tegangan AC (V)', dataStore.acVoltage], current: ['🔌 Arus AC (A)', dataStore.acCurrent], power: ['💡 Daya AC', dataStore.acPower], energy: ['🔋 Energi AC (kWh)', dataStore.acEnergy] };
+            const [label, data] = map[currentChartType] || map['voltage'];
+            chart.data.datasets[0].label = label;
+            chart.data.datasets[0].data = data;
+            chart.update('none');
+        }
+
+        // ============ UI UPDATE FUNCTIONS ============
+        function updateRelayUI(acState, acAuto, acFault) {
+            const acRelayStatus = document.getElementById('acRelayStatus');
+            const acRelayMode = document.getElementById('acRelayMode');
+            currentRelayState = acState;
+            currentRelayAuto = acAuto;
+            
+            if (acRelayStatus) {
+                let dotClass = '', statusText = '';
+                if (acFault) { statusText = '⚡ TRIP OTOMATIS'; acRelayStatus.className = 'relay-status-pill tripped'; dotClass = 'tripped-dot'; }
+                else if (acAuto && acState) { statusText = '🟢 OTOMATIS NYALA'; acRelayStatus.className = 'relay-status-pill auto-on'; dotClass = 'on-dot'; }
+                else if (acAuto && !acState) { statusText = '🔴 OTOMATIS MATI'; acRelayStatus.className = 'relay-status-pill auto-off'; dotClass = 'off-dot'; }
+                else if (!acAuto && acState) { statusText = '🟢 MANUAL NYALA'; acRelayStatus.className = 'relay-status-pill on'; dotClass = 'on-dot'; }
+                else { statusText = '🔴 MANUAL MATI'; acRelayStatus.className = 'relay-status-pill off'; dotClass = 'off-dot'; }
+                acRelayStatus.innerHTML = `<span class="relay-status-dot ${dotClass}"></span> ${statusText}`;
+            }
+            if (acRelayMode) { acRelayMode.textContent = acFault ? '⚡ TRIP OTOMATIS' : acAuto ? '🔄 OTOMATIS (' + (acState?'NYALA':'MATI') + ')' : '👆 MANUAL (' + (acState?'NYALA':'MATI') + ')'; acRelayMode.style.color = acFault ? '#f59e0b' : 'var(--text-primary)'; }
+            updateManualButton(acState, acAuto, acFault);
+        }
+
+        function updateProtectionUI(acOv, acOc, acFault) {
+            const acOvBadge = document.getElementById('acOvBadge');
+            const acOcBadge = document.getElementById('acOcBadge');
+            const acFaultBadge = document.getElementById('acFaultBadge');
+            const faultNotification = document.getElementById('faultNotification');
+            const acVoltageItem = document.getElementById('acVoltageItem');
+            const acCurrentItem = document.getElementById('acCurrentItem');
+            
+            if (acOvBadge) { acOvBadge.className = acOv ? 'protection-badge overvoltage' : 'protection-badge normal'; acOvBadge.textContent = acOv ? '⚡ Tegangan Lebih!' : '✅ Normal'; }
+            if (acOcBadge) { acOcBadge.className = acOc ? 'protection-badge overcurrent' : 'protection-badge normal'; acOcBadge.textContent = acOc ? '🔌 Arus Lebih!' : '✅ Normal'; }
+            if (acFaultBadge) { acFaultBadge.className = acFault ? 'protection-badge fault' : 'protection-badge normal'; acFaultBadge.textContent = acFault ? '⚡ TRIP OTOMATIS!' : '✅ Tidak Ada Gangguan'; }
+            
+            let msgs = [];
+            if (acOv) msgs.push('⚡ Tegangan Lebih');
+            if (acOc) msgs.push('🔌 Arus Lebih');
+            
+            if (faultNotification) {
+                if (msgs.length > 0) { faultNotification.style.display = 'block'; faultNotification.innerHTML = '<strong>⚡ AUTO TRIP DIAKTIFKAN!</strong><br>' + msgs.join(', '); }
+                else if (acFault) { faultNotification.style.display = 'block'; faultNotification.innerHTML = '<strong>⚠️ GANGGUAN TERSIMPAN!</strong><br>✅ Nilai normal | 🔁 Tekan RESET'; }
+                else { faultNotification.style.display = 'none'; }
+            }
+            
+            const protectionText = document.getElementById('protectionStatusText');
+            if (protectionText) { protectionText.textContent = msgs.length ? '⚡ AUTO TRIP: ' + msgs.join(', ') : '✅ Semua Normal'; protectionText.style.color = msgs.length ? '#f59e0b' : '#10b981'; }
+            
+            const acFaultStatus = document.getElementById('acFaultStatus');
+            if (acFaultStatus) { acFaultStatus.textContent = acFault ? '⚡ AKTIF' : '✅ Tidak Ada'; acFaultStatus.style.color = acFault ? '#f59e0b' : '#10b981'; }
+            
+            if (acVoltageItem) { acVoltageItem.classList.toggle('protection-warning', acOv); document.getElementById('acVoltageWarning').textContent = acOv ? `⚠️ BATAS >${currentLimits.ac_voltage}V` : ''; }
+            if (acCurrentItem) { acCurrentItem.classList.toggle('protection-warning', acOc); document.getElementById('acCurrentWarning').textContent = acOc ? `⚠️ BATAS >${currentLimits.ac_current}A` : ''; }
+        }
+
+        function updateLimitsUI(limits) {
+            if (limits.ac_voltage) currentLimits.ac_voltage = Math.min(limits.ac_voltage, 265);
+            if (limits.ac_current) currentLimits.ac_current = limits.ac_current;
+            
+            const els = { currentAcVLimit: currentLimits.ac_voltage + ' V', currentAcILimit: currentLimits.ac_current + ' A', acVlimitDisplay: currentLimits.ac_voltage, acIlimitDisplay: currentLimits.ac_current, simOvLimit: currentLimits.ac_voltage, simOcLimit: currentLimits.ac_current };
+            Object.keys(els).forEach(id => { const el = document.getElementById(id); if (el) el.textContent = els[id]; });
+            
+            updateGaugeRanges();
+            limitsInitialized = true;
+        }
+
+        function updateDisplay(acData) {
+            lastDataTimestamp = Date.now();
+            lastHeartbeat = Date.now();
+            
+            if (!dataReceivedFromESP) { dataReceivedFromESP = true; showGauges(); console.log("✅ Data pertama diterima"); }
+            
+            const els = { acVoltage: Math.min(acData.voltage, 265).toFixed(1), acCurrent: acData.current.toFixed(3), acFrequency: (acData.frequency || 50.0).toFixed(1), acPF: acData.pf.toFixed(2), acEnergy: acData.energy.toFixed(3) };
+            Object.keys(els).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const old = el.textContent;
+                    if (old !== els[id] && old !== '--') { el.textContent = els[id]; el.classList.add('updating'); setTimeout(() => el.classList.remove('updating'), 400); }
+                    else if (old === '--') el.textContent = els[id];
+                }
+            });
+            
+            updateGauges(acData);
+            const acFault = acData.fault_active || false;
+            currentFaults.ac_fault = acFault;
+            if (acData.simulation_active !== undefined) updateSimulationIndicator(acData.simulation_active);
+            updateRelayUI(acData.relay_state, acData.relay_auto, acFault);
+            updateProtectionUI(acData.overvoltage, acData.overcurrent, acFault);
+            
+            // HAPTIC: Selalu update berdasarkan data terbaru
+            triggerFaultHaptic(acData);
+            
+            const eventType = checkFaultTransition(acData);
+            if (eventType !== 'normal' || acFault) addLoggerEntry(acData, eventType);
+            else if (!window.lastNormalLog || Date.now() - window.lastNormalLog > 5000) { addLoggerEntry(acData, 'normal'); window.lastNormalLog = Date.now(); }
+        }
+
+        function handleFullData(data) {
+            if (data.rssi !== undefined) updateRSSI(data.rssi);
+            else if (deviceOnline) updateRSSI(null);
+            if (data.free_heap !== undefined) updateMemoryDisplay(data.free_heap);
+            const testModeElem = document.getElementById('testModeStatus');
+            if (testModeElem && data.test_mode !== undefined) { testModeElem.textContent = data.test_mode ? '🔬 AKTIF' : '✅ Normal'; testModeElem.style.color = data.test_mode ? '#f59e0b' : '#10b981'; }
+            if (data.limits) { updateLimitsUI(data.limits); saveLimits(data.limits); }
+        }
+
+        function saveLastData(data) { try { localStorage.setItem('lastMonitoringData', JSON.stringify({ data, timestamp: Date.now() })); } catch(e) {} }
+        function saveLimits(limits) { try { localStorage.setItem('lastLimits', JSON.stringify(limits)); } catch(e) {} }
+
+        function clearCache() {
+            if (confirm('Hapus semua data cache?')) {
+                const keepLogger = confirm('Simpan riwayat pencatat?');
+                const keepHaptic = hapticEnabled;
+                if (!keepLogger) localStorage.clear();
+                else {
+                    const tempLoggerData = localStorage.getItem('loggerData');
+                    const tempLoggerStats = localStorage.getItem('loggerStats');
+                    const tempMqttId = localStorage.getItem('mqttClientId');
+                    const tempTheme = localStorage.getItem('theme');
+                    const tempPalette = localStorage.getItem('palette');
+                    const tempBgPalette = localStorage.getItem('bgPalette');
+                    localStorage.clear();
+                    if (tempLoggerData) localStorage.setItem('loggerData', tempLoggerData);
+                    if (tempLoggerStats) localStorage.setItem('loggerStats', tempLoggerStats);
+                    if (tempMqttId) localStorage.setItem('mqttClientId', tempMqttId);
+                    if (tempTheme) localStorage.setItem('theme', tempTheme);
+                    if (tempPalette) localStorage.setItem('palette', tempPalette);
+                    if (tempBgPalette) localStorage.setItem('bgPalette', tempBgPalette);
+                }
+                localStorage.setItem('hapticEnabled', keepHaptic);
+                stopHapticInterval();
+                setTimeout(() => window.location.reload(), 500);
+            }
+        }
+
+        // ============ FAB FUNCTIONS ============
+        function toggleFab() {
+            const container = document.getElementById('fabContainer');
+            container.classList.toggle('active');
+        }
+
+        function closeFab() {
+            const container = document.getElementById('fabContainer');
+            container.classList.remove('active');
+        }
+
+        // ============ THEME FUNCTIONS ============
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            const themeColor = theme === 'dark' ? '#1a1a2e' : '#667eea';
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', themeColor);
+            document.getElementById('themeLightBtn').classList.toggle('active', theme === 'light');
+            document.getElementById('themeDarkBtn').classList.toggle('active', theme === 'dark');
+            updateChartTheme();
+            updateActiveThemeInfo();
+            updatePreviewDots();
+        }
+
+        function setPalette(palette) {
+            document.documentElement.removeAttribute('data-palette');
+            if (palette !== 'default') document.documentElement.setAttribute('data-palette', palette);
+            localStorage.setItem('palette', palette);
+            document.querySelectorAll('#paletteSwatches .color-swatch').forEach(swatch => {
+                swatch.classList.toggle('active', swatch.dataset.palette === palette);
+            });
+            updateGaugeRanges();
+            updateChartTheme();
+            updateActivePaletteInfo();
+            updatePreviewDots();
+            if (window.innerWidth < 768) setTimeout(closeFab, 300);
+        }
+
+        function setBgPalette(bgPalette) {
+            document.documentElement.removeAttribute('data-bg-palette');
+            if (bgPalette !== 'bg-default') document.documentElement.setAttribute('data-bg-palette', bgPalette);
+            localStorage.setItem('bgPalette', bgPalette);
+            document.querySelectorAll('#bgPaletteSwatches .bg-swatch').forEach(swatch => {
+                swatch.classList.toggle('active', swatch.dataset.bgPalette === bgPalette);
+            });
+            updatePreviewDots();
+            if (window.innerWidth < 768) setTimeout(closeFab, 300);
+        }
+
+        function updatePreviewDots() {
+            const style = getComputedStyle(document.documentElement);
+            const previewGauge = document.getElementById('previewGauge');
+            const previewBrand = document.getElementById('previewBrand');
+            const previewBg = document.getElementById('previewBg');
+            if (previewGauge) previewGauge.style.background = style.getPropertyValue('--gauge-normal').trim();
+            if (previewBrand) previewBrand.style.background = style.getPropertyValue('--brand-primary').trim();
+            if (previewBg) previewBg.style.background = style.getPropertyValue('--bg-card').trim();
+        }
+
+        function updateActiveThemeInfo() {
+            const el = document.getElementById('activeThemeInfo');
+            if (el) {
+                const theme = document.documentElement.getAttribute('data-theme') || 'light';
+                el.textContent = theme === 'dark' ? '🌙 Gelap' : '☀️ Terang';
+            }
+        }
+
+        function updateActivePaletteInfo() {
+            const el = document.getElementById('activePaletteInfo');
+            if (el) {
+                const palette = document.documentElement.getAttribute('data-palette') || 'default';
+                const names = { default: 'Default (Ungu)', ocean: 'Ocean (Biru)', forest: 'Forest (Hijau)', sunset: 'Sunset (Orange)', purple: 'Purple (Ungu Tua)', rose: 'Rose (Pink)', amber: 'Amber (Kuning)' };
+                el.textContent = names[palette] || palette;
+            }
+        }
+
+        function updateChartTheme() {
+            if (!chart) return;
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const style = getComputedStyle(document.documentElement);
+            const brandPrimary = style.getPropertyValue('--brand-primary').trim() || '#6366f1';
+            chart.options.scales.y.grid.color = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
+            chart.options.scales.y.ticks.color = isDark ? '#94a3b8' : '#6b7280';
+            chart.options.scales.x.ticks.color = isDark ? '#94a3b8' : '#6b7280';
+            chart.options.plugins.legend.labels.color = isDark ? '#f1f5f9' : '#1f2937';
+            chart.data.datasets[0].borderColor = brandPrimary;
+            chart.data.datasets[0].backgroundColor = brandPrimary + '1a';
+            chart.update('none');
+        }
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            const savedPalette = localStorage.getItem('palette') || 'default';
+            const savedBgPalette = localStorage.getItem('bgPalette') || 'bg-default';
+            setTheme(savedTheme);
+            setPalette(savedPalette);
+            setBgPalette(savedBgPalette);
+        }
+
+        // ============ PWA FUNCTIONS ============
+        function checkPWAStatus() {
+            const pwaStatus = document.getElementById('pwaStatus');
+            if (!pwaStatus) return;
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            const hasSW = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
+            if (isStandalone) { pwaInstalled = true; pwaStatus.textContent = '✅ Terpasang'; pwaStatus.style.color = '#10b981'; }
+            else if (hasSW) { pwaStatus.textContent = '📦 Siap (SW)'; pwaStatus.style.color = '#3b82f6'; }
+            else { pwaStatus.textContent = '⏳ Mendaftarkan...'; pwaStatus.style.color = '#f59e0b'; }
+        }
+
+        function initPWA() {
+            window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; setTimeout(() => { if (!pwaInstalled && deferredPrompt) { const el = document.getElementById('pwaInstallPrompt'); if (el) el.style.display = 'block'; } }, 3000); });
+            window.addEventListener('appinstalled', () => { pwaInstalled = true; deferredPrompt = null; const el = document.getElementById('pwaInstallPrompt'); if (el) el.style.display = 'none'; checkPWAStatus(); });
+            checkPWAStatus();
+        }
+
+        function installPWA() {
+            if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(r => { if (r.outcome === 'accepted') pwaInstalled = true; deferredPrompt = null; const el = document.getElementById('pwaInstallPrompt'); if (el) el.style.display = 'none'; }); }
+            else showToast('📱 Gunakan menu browser > Tambah ke Layar Utama', 'info');
+        }
+
+        function dismissInstall() { const el = document.getElementById('pwaInstallPrompt'); if (el) el.style.display = 'none'; }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.style.cssText = `position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:${type==='error'?'#ef4444':'#6366f1'};color:white;padding:10px 20px;border-radius:10px;z-index:10000;animation:slideIn 0.5s ease;font-size:0.9em;`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ============ SERVICE WORKER ============
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => { if (!refreshing) { refreshing = true; window.location.reload(); } });
+                window.addEventListener('load', async () => {
+                    try {
+                        const registration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+                        console.log('[SW] ✅ Registrasi berhasil');
+                        setTimeout(checkPWAStatus, 1000);
+                    } catch (err) { console.error('[SW] ❌ Gagal:', err); }
+                });
+            }
+        }
+
+        // ============ INISIALISASI ============
+        window.onload = () => {
+            console.log("🚀 Sistem Monitoring Daya v7.8 - Haptic Fault State Recovery");
+            console.log("📳 Haptic Feedback:", hapticEnabled ? 'AKTIF (Continuous)' : 'NONAKTIF');
+            console.log("🔑 Client ID:", persistentClientId);
+            
+            initTheme();
+            initHaptic();
+            initGauges();
+            initChart();
+            initLogger();
+            
+            // TAMBAHKAN: Coba pulihkan state fault dari cache SEBELUM koneksi MQTT
+            const faultRestored = restoreFaultStateFromCache();
+            if (faultRestored) {
+                console.log('📳 State fault berhasil dipulihkan dari cache');
+                // Mulai haptic segera
+                startHapticInterval(currentFaultType);
+                // Update UI untuk menunjukkan fault
+                const faultNotification = document.getElementById('faultNotification');
+                if (faultNotification) {
+                    faultNotification.style.display = 'block';
+                }
+            }
+            
+            updateConnectionUI(false);
+            document.getElementById('connectionStatus').className = 'status-badge connecting';
+            document.getElementById('connectionStatus').textContent = '🟡 Menghubungkan...';
+            
+            currentLimits.ac_voltage = 250;
+            currentLimits.ac_current = 90;
+            updateGaugeRanges();
+            
+            connectMQTT();
+            initPWA();
+            registerServiceWorker();
+            
+            setInterval(checkHeartbeat, 30000);
+            updateActiveThemeInfo();
+            updateActivePaletteInfo();
+            
+            window.addEventListener('online', () => { 
+                if (!mqttClient || !mqttClient.isConnected()) {
+                    connectMQTT();
+                    // Setelah reconnect, coba pulihkan fault state lagi
+                    setTimeout(() => {
+                        if (!isFaultActive) {
+                            const restored = restoreFaultStateFromCache();
+                            if (restored) {
+                                console.log('📳 State fault dipulihkan setelah online');
+                                startHapticInterval(currentFaultType);
+                            }
+                        }
+                    }, 3000);
+                }
+            });
+            window.addEventListener('offline', () => { 
+                updateConnectionUI(false); 
+                updateRSSI(null); 
+                // Jangan stop haptic saat offline
+            });
+            
+            window.addEventListener('resize', () => { 
+                if (chart) chart.resize(); 
+                Object.values(gauges).forEach(g => { if (g && g.canvas) g.resize(); });
+            });
+            
+            // TAMBAHKAN: Event listener untuk visibility change (deteksi tab dibuka kembali)
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && isFaultActive && !hapticInterval) {
+                    // Tab dibuka kembali, fault masih aktif, tapi interval tidak berjalan
+                    console.log('📳 Tab dibuka kembali, restart haptic untuk fault aktif:', currentFaultType);
+                    startHapticInterval(currentFaultType);
+                }
+                // Jangan stop haptic saat tab disembunyikan
+            });
+            
+            // Cleanup haptic saat page unload
+            window.addEventListener('beforeunload', () => {
+                stopHapticInterval();
+            });
+            
+            console.log("✅ Sistem siap. Klik 📳 di card header untuk toggle haptic, FAB 🎨 untuk tema!");
+            
+            // TAMBAHKAN: Cek fault state secara berkala dari cache (setiap 5 detik)
+            setInterval(() => {
+                if (!deviceOnline && !isFaultActive) {
+                    // Jika device offline, cek cache untuk fault state
+                    restoreFaultStateFromCache();
+                    if (isFaultActive && !hapticInterval) {
+                        startHapticInterval(currentFaultType);
+                    }
+                }
+            }, 5000);
+        };
+    </script>
+</body>
+</html>
