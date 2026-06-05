@@ -1,6 +1,6 @@
 {
   "name": "Sistem Monitoring Daya - Power Monitor",
-  "short_name": "PowerMon",
+  "short_name": "ListrikKu",
   "description": "Monitoring Daya AC Real-time dengan Kontrol Relay & Proteksi Otomatis - ESP32 + PZEM-004T",
   "start_url": "./",
   "scope": "./",
